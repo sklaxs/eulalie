@@ -64,6 +64,17 @@ textarea#editor:focus{outline:none}
 .upload-row{display:flex;gap:10px;align-items:center}
 .upload-row input[type=file]{color:var(--muted);font-size:13px}
 .empty-note{color:var(--muted);font-size:13px;margin-top:10px}
+
+/* ── Responsive ── */
+@media (max-width: 900px){
+header.top{flex-wrap:wrap;gap:8px}
+.layout{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+.pane{border-right:none;border-bottom:1px solid var(--border)}
+.pane:last-child{border-bottom:none}
+.pane-head h2{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:45vw}
+.proj-title{font-size:14px}
+.counter{font-size:12px}
+}
 </style>
 </head>
 <body>
@@ -84,10 +95,10 @@ textarea#editor:focus{outline:none}
 </select>
 <button class="btn-sm" type="submit">↻</button>
 </form>
-<nav>
-<a href="/settings">⚙ Paramètres</a>
-<a href="/">← Projets</a>
-<a href="/projects/{{ project.id }}/export.md" download>Exporter .md</a>
+<nav style="display:flex;gap:10px;align-items:center">
+<a href="/settings" title="Paramètres">⚙</a>
+<a href="/" title="Projets">←</a>
+<a href="/projects/{{ project.id }}/export.md" download title="Exporter en Markdown">⬇</a>
 </nav>
 </header>
 <div class="layout">
