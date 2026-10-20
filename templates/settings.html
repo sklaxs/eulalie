@@ -52,12 +52,12 @@ input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border)
 <div class="card">
 <h2>Traduction automatique (anglais → français)</h2>
 <label for="translate_server">Serveur LibreTranslate (URL https://)</label>
-<input type="text" name="translate_server" id="translate_server" placeholder="https://libretranslate.exemple.fr"
+<input type="text" name="translate_server" id="translate_server" placeholder="http://libretranslate:5000"
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
 <p class="hint">Sélectionnez du texte dans le panneau de gauche : un bouton « Traduire » apparaît
-et insère la traduction dans l'éditeur. Serveur par défaut si vide : LibreTranslate public.
-Pour la confidentialité et la maîtrise du flux réseau, auto-hébergez LibreTranslate dans
-votre Docker Compose.</p>
+et insère la traduction dans l'éditeur. Préréglé sur le service LibreTranslate du
+docker-compose (interne à votre machine). Le premier appel télécharge les modèles
+EN→FR (~1 Go) — patientez une minute.</p>
 </div>
 <button class="btn" type="submit">Enregistrer</button>
 </form>

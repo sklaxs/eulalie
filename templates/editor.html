@@ -23,8 +23,11 @@ nav a:hover{color:var(--accent2)}
 #source ::selection{background:rgba(139,124,246,.4)}
 .chapter-title{font-size:19px;font-weight:700;margin-bottom:14px;color:#fff}
 .toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;align-items:center}
-.toolbar button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer}
+.toolbar button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer;line-height:1.4;min-height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .toolbar button:hover{border-color:var(--accent)}
+.toast{position:fixed;bottom:24px;right:24px;background:#2a1b25;border:1px solid rgba(255,80,80,.5);color:#ff9a9a;border-radius:10px;padding:12px 18px;font-size:14px;max-width:420px;display:none;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.show{display:block}
+.toast.ok{background:#12241b;border-color:rgba(61,214,140,.5);color:var(--ok)}
 textarea#editor{flex:1;border:none;border-radius:0;background:var(--bg);color:var(--fg);font:14px/1.65 ui-monospace,'Cascadia Code',monospace;padding:18px 22px;resize:none}
 textarea#editor:focus{outline:none}
 #preview{font-size:15px;line-height:1.7}
@@ -103,13 +106,10 @@ textarea#editor:focus{outline:none}
 </div>
 <textarea id="editor" spellcheck="true">{{ current_markdown }}</textarea>
 <div id="preview" style="display:none" class="pane-body"></div>
-<div class="pane-head">
-<span id="saveStatus" class="saved">✓ enregistré</span>
-<span style="flex:1"></span>
-</div>
 </section>
 </div>
 <button id="translateBtn">🌍 Traduire</button>
+<div id="toast" class="toast"></div>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -154,20 +154,25 @@ function insertImage(id,name){insert('!['+name+'](/images/'+id+')');closeImgModa
 
 let previewOn=false;
 function togglePreview(){previewOn=!previewOn;
-if(previewOn){editor.style.display='none';preview.style.display='block';
+const btn=document.getElementById('togglePreview');
+if(previewOn){
 fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/preview',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(editor.value)})
-.then(r=>r.text()).then(h=>preview.innerHTML=h);
-document.getElementById('togglePreview').textContent='✎ Rédaction';}
-else{editor.style.display='block';preview.style.display='none';
-document.getElementById('togglePreview').textContent='👁 Aperçu';}}
+.then(r=>{if(!r.ok)throw 0;return r.text()})
+.then(h=>{preview.innerHTML=h;editor.style.display='none';preview.style.display='block';btn.textContent='✎ Rédaction';})
+.catch(()=>{previewOn=false;showToast('Aperçu indisponible.');});
+}
+else{editor.style.display='block';preview.style.display='none';btn.textContent='👁 Aperçu';}}
+document.getElementById('togglePreview').addEventListener('click',togglePreview);
 
 let saveTimer=null;
 function scheduleSave(){if(!AUTOSAVE)return;clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,1200);}
 function saveNow(){clearTimeout(saveTimer);
 fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(editor.value)})
-.then(()=>{const s=document.getElementById('saveStatus');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1500);});}
+.then(()=>showToast('✓ Enregistré',true,1200));}
 editor.addEventListener('input',scheduleSave);
 window.addEventListener('beforeunload',()=>{if(editor.value)navigator.sendBeacon('/projects/{{ project.id }}/chapter/{{ current_idx }}/save',new Blob([new URLSearchParams({markdown:editor.value})],{type:'application/x-www-form-urlencoded'}));});
+
+function showToast(msg,ok=false,ms=4000){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(ok?' ok':'');clearTimeout(t._tm);t._tm=setTimeout(()=>t.className='toast',ms);}
 
 // Images modal
 document.getElementById('imgBtn').onclick=()=>document.getElementById('imgModal').classList.add('show');
@@ -238,12 +243,14 @@ translateBtn.style.top=(r.bottom+window.scrollY+8)+'px';
 });
 translateBtn.onclick=()=>{
 if(!selText)return;
-translateBtn.textContent='… traduction';
+translateBtn.textContent='… traduction';translateBtn.disabled=true;
 fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)})
-.then(r=>{if(!r.ok)throw 0;return r.text()})
-.then(txt=>{insert(txt+'\n');translateBtn.textContent='🌍 Traduire';translateBtn.style.display='none';})
-.catch(()=>{translateBtn.textContent='⚠ erreur';setTimeout(()=>{translateBtn.textContent='🌍 Traduire';translateBtn.style.display='none';},1500);});
+.then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
+.then(txt=>{insert(txt+'\n');resetTranslateBtn();})
+.catch(e=>{resetTranslateBtn();
+showToast('Échec de la traduction — '+e.message+'. Vérifiez le serveur LibreTranslate dans Paramètres (ex. http://libretranslate:5000) et que le conteneur est démarré.');});
 };
+function resetTranslateBtn(){translateBtn.textContent='🌍 Traduire';translateBtn.disabled=false;translateBtn.style.display='none';}
 
 // Raccourcis personnalisés
 function matchShortcut(e,combo){

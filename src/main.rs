@@ -895,7 +895,8 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             autosave: true,
             shortcut_prev: "Alt+ArrowLeft".into(),
             shortcut_next: "Alt+ArrowRight".into(),
-            translate_server: None,
+            // Préréglage : le service libretranslate du docker-compose (interne).
+            translate_server: Some("http://libretranslate:5000".into()),
         },
     }
 }
@@ -931,10 +932,12 @@ async fn save_settings(
         "next": sanitize_shortcut(form.shortcut_next.as_deref().unwrap_or("Alt+ArrowRight")),
     })
     .to_string();
+    // http:// autorisé uniquement pour les adresses internes Docker
+    // (libretranslate:5000) ; https:// requis pour tout serveur externe.
     let server = form
         .translate_server
         .map(|s| s.trim().to_string())
-        .filter(|s| s.starts_with("https://"));
+        .filter(|s| s.starts_with("https://") || s == "http://libretranslate:5000");
     let res = sqlx::query(
         "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server) VALUES (?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server",
@@ -1008,7 +1011,7 @@ async fn translate_text(
     .ok()
     .flatten()
     .flatten()
-    .unwrap_or_else(|| "https://translate.terraprint.co".into());
+    .unwrap_or_else(|| "http://libretranslate:5000".into());
     let body = serde_json::json!({
         "q": form.text,
         "source": "en",
