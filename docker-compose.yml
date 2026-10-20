@@ -4,14 +4,19 @@ services:
     container_name: eulalie
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8080:8080"   # accessible seulement en local ; reverse-proxy pour exposer
+      - "127.0.0.1:8080:8080"   # accessible seulement en local ; reverse-proxy TLS pour exposer
     environment:
       - RUST_LOG=eulalie=info
       # En production derrière un reverse proxy HTTPS, définir l'URL publique
       # pour activer les cookies `Secure` :
       # - EULALIE_PUBLIC_URL=https://traduction.exemple.fr
     volumes:
+      # ── Base SQLite ──
+      # Option A (défaut) : volume Docker nommé — sauvegarde via
+      #   docker run --rm -v eulalie_data:/data -v $(pwd):/backup alpine tar czf /backup/eulalie-data.tgz /data
       - eulalie_data:/data
+      # Option B : monter un dossier de l'hôte directement (décommenter A ou B) :
+      # - ./donnees-eulalie:/data
     read_only: true
     tmpfs:
       - /tmp
@@ -19,21 +24,24 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    depends_on:
+      - libretranslate
 
-# Traduction auto-hébergée (recommandé : le texte sélectionné ne quitte
-# pas votre machine). Décommentez ce service, puis dans Paramètres :
-# https://libretranslate:5000
-#   libretranslate:
-#     image: libretranslate/libretranslate:latest
-#     restart: unless-stopped
-#     command: --en --fr
-#     expose:
-#       - "5000"
-#     volumes:
-#       - lt_models:/home/libretranslate/.local
-#     security_opt:
-#       - no-new-privileges:true
+  # Traduction auto-hébergée EN→FR : le texte sélectionné ne quitte pas
+  # votre machine. Au premier démarrage, entrez dans Paramètres :
+  #   Serveur LibreTranslate : http://libretranslate:5000
+  libretranslate:
+    image: libretranslate/libretranslate:latest
+    container_name: eulalie-libretranslate
+    restart: unless-stopped
+    command: --en --fr --disable-web-ui
+    expose:
+      - "5000"          # interne au réseau compose uniquement, non publié
+    volumes:
+      - lt_models:/home/libretranslate/.local   # modèles téléchargés au 1er démarrage
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
-  eulalie_data:
-#  lt_models:
+  eulalie_data:      # base SQLite + fichiers EPUB/PDF importés
+  lt_models:          # modèles LibreTranslate

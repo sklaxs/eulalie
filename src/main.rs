@@ -88,6 +88,7 @@ async fn main() -> Result<()> {
         .route("/projects/:id/export.md", get(export_markdown))
         .route("/projects/:id/images", post(upload_image))
         .route("/images/:image_id", get(serve_image))
+        .route("/images/:image_id/rename", post(rename_image))
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
@@ -767,8 +768,56 @@ async fn upload_image(
     .execute(&state.db)
     .await;
     match res {
-        Ok(_) => Redirect::to(&format!("/projects/{project_id}")).into_response(),
+        Ok(done) => {
+            let id = done.last_insert_rowid();
+            (
+                [(header::CONTENT_TYPE, "application/json")],
+                format!("{{\"id\":{id},\"filename\":\"{filename}\"}}"),
+            )
+                .into_response()
+        }
         Err(_) => server_error(),
+    }
+}
+
+#[derive(Deserialize)]
+struct RenameImageForm {
+    filename: String,
+}
+
+async fn rename_image(
+    State(state): State<SharedState>,
+    Path(image_id): Path<i64>,
+    session: Session,
+    Form(form): Form<RenameImageForm>,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    // N'affiche jamais les chemins : le nom devient juste une étiquette Markdown propre.
+    let name: String = form
+        .filename
+        .trim()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '.' | ' '))
+        .take(120)
+        .collect();
+    if name.is_empty() {
+        return (StatusCode::BAD_REQUEST, "nom invalide").into_response();
+    }
+    let res = sqlx::query(
+        "UPDATE project_images SET filename = ? WHERE id = ? AND project_id IN (SELECT id FROM projects WHERE user_id = ?)",
+    )
+    .bind(&name)
+    .bind(image_id)
+    .bind(user.0)
+    .execute(&state.db)
+    .await;
+    match res {
+        Ok(done) if done.rows_affected() == 1 => {
+            ([(header::CONTENT_TYPE, "application/json")], format!("{{\"filename\":\"{name}\"}}")).into_response()
+        }
+        _ => StatusCode::NOT_FOUND.into_response(),
     }
 }
 

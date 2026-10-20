@@ -53,8 +53,10 @@ textarea#editor:focus{outline:none}
 .img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
 .img-card{border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;cursor:pointer;background:var(--bg3)}
 .img-card:hover{border-color:var(--accent)}
-.img-card img{max-width:100%;height:70px;object-fit:contain;border-radius:6px}
-.img-card .name{font-size:11px;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.img-card .img-thumb img{max-width:100%;height:70px;object-fit:contain;border-radius:6px}
+.img-card .name{font-size:11px;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text}
+.img-card .name:hover{color:var(--accent2)}
+.img-card .rename-hint{font-size:9px;color:var(--muted);opacity:.6;margin-top:3px}
 .upload-row{display:flex;gap:10px;align-items:center}
 .upload-row input[type=file]{color:var(--muted);font-size:13px}
 .empty-note{color:var(--muted);font-size:13px;margin-top:10px}
@@ -97,7 +99,7 @@ textarea#editor:focus{outline:none}
 <button onclick="insert('[texte](https://)')" title="Lien">🔗</button>
 <span style="flex:1"></span>
 <button id="togglePreview">👁 Aperçu</button>
-{% if !autosave %}<button id="saveBtn" class="primary-btn" onclick="saveNow()" style="background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:6px;font-weight:600">💾 Sauvegarder</button>{% endif %}
+{% if !autosave %}<button id="saveBtn" onclick="saveNow()">💾 Sauvegarder</button>{% endif %}
 </div>
 <textarea id="editor" spellcheck="true">{{ current_markdown }}</textarea>
 <div id="preview" style="display:none" class="pane-body"></div>
@@ -112,23 +114,26 @@ textarea#editor:focus{outline:none}
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
 <div class="modal-body">
-<form class="upload-row" method="post" action="/projects/{{ project.id }}/images" enctype="multipart/form-data">
-<input type="file" name="file" accept=".png,.jpg,.jpeg,.gif" required>
-<button class="btn-sm" type="submit">Téléverser</button>
+<form class="upload-row" id="imgUploadForm">
+<input type="file" name="file" accept=".png,.jpg,.jpeg,.gif" required id="imgFileInput">
+<button class="btn-sm" type="submit" id="imgUploadBtn">Téléverser</button>
+<span id="imgUploadStatus" class="hint"></span>
 </form>
 {% if images.is_empty() %}
-<p class="empty-note">Aucune image pour l'instant — téléversez une image, elle sera disponible dans tous les chapitres du projet.</p>
-{% else %}
-<div class="img-grid">
+<p class="empty-note" id="imgEmptyNote">Aucune image pour l'instant — téléversez une image, elle sera disponible dans tous les chapitres du projet.</p>
+{% endif %}
+<div class="img-grid" id="imgGrid">
 {% for img in images %}
-<div class="img-card" onclick="insertImage({{ img.id }}, '{{ img.filename }}')">
+<div class="img-card" data-id="{{ img.id }}" data-name="{{ img.filename }}">
+<div class="img-thumb" onclick="insertImage({{ img.id }}, this.closest('.img-card').dataset.name)">
 <img src="/images/{{ img.id }}" loading="lazy" alt="{{ img.filename }}">
-<div class="name">{{ img.filename }}</div>
+</div>
+<div class="name" title="Cliquer pour renommer" onclick="renameImage({{ img.id }}, this)">{{ img.filename }}</div>
+<div class="rename-hint">✎ renommer · ▣ insérer</div>
 </div>
 {% endfor %}
 </div>
-{% endif %}
-<p class="hint empty-note">Cliquez sur une image pour l'insérer à l'emplacement du curseur.</p>
+<p class="hint empty-note">Cliquez sur le nom pour renommer, sur l'image pour l'insérer au curseur.</p>
 </div>
 </div>
 </div>
@@ -168,6 +173,54 @@ window.addEventListener('beforeunload',()=>{if(editor.value)navigator.sendBeacon
 document.getElementById('imgBtn').onclick=()=>document.getElementById('imgModal').classList.add('show');
 function closeImgModal(){document.getElementById('imgModal').classList.remove('show');}
 document.getElementById('imgModal').addEventListener('click',e=>{if(e.target.id==='imgModal')closeImgModal();});
+
+// Upload d'image en AJAX : pas de navigation, la position d'édition est conservée.
+document.getElementById('imgUploadForm').addEventListener('submit',e=>{
+e.preventDefault();
+const fd=new FormData(e.target);
+const status=document.getElementById('imgUploadStatus');
+const btn=document.getElementById('imgUploadBtn');
+btn.disabled=true;status.textContent='Envoi…';
+fetch('/projects/{{ project.id }}/images',{method:'POST',body:fd})
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(img=>{
+status.textContent='';
+const grid=document.getElementById('imgGrid');
+const note=document.getElementById('imgEmptyNote');if(note)note.remove();
+const card=document.createElement('div');
+card.className='img-card';card.dataset.id=img.id;card.dataset.name=img.filename;
+card.innerHTML='<div class="img-thumb"><img src="/images/'+img.id+'" alt=""></div>'
++'<div class="name" title="Cliquer pour renommer"></div><div class="rename-hint">✎ renommer · ▣ insérer</div>';
+card.querySelector('.name').textContent=img.filename;
+card.querySelector('.name').onclick=()=>renameImage(img.id,card.querySelector('.name'));
+card.querySelector('.img-thumb').onclick=()=>insertImage(img.id,card.dataset.name);
+grid.prepend(card);
+e.target.reset();
+})
+.catch(()=>{status.textContent='Échec de l\'envoi (PNG, JPEG ou GIF uniquement).'})
+.finally(()=>btn.disabled=false);
+});
+
+// Renommage inline : clic sur le nom → champ éditable → Enter pour valider.
+function renameImage(id,nameEl){
+const old=nameEl.textContent;
+nameEl.contentEditable='true';nameEl.focus();
+document.execCommand('selectAll',false,null);
+const done=()=>{
+nameEl.contentEditable='false';
+const newName=nameEl.textContent.trim();
+nameEl.textContent=old; // en attendant la réponse
+if(!newName||newName===old){nameEl.textContent=old;return;}
+fetch('/images/'+id+'/rename',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'filename='+encodeURIComponent(newName)})
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(v=>{nameEl.textContent=v.filename;
+const card=nameEl.closest('.img-card');card.dataset.name=v.filename;})
+.catch(()=>{nameEl.textContent=old;});
+};
+nameEl.onblur=done;
+nameEl.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();nameEl.blur();}
+if(ev.key==='Escape'){nameEl.textContent=old;nameEl.contentEditable='false';}};
+}
 
 // Traduction à la sélection (panneau gauche)
 const translateBtn=document.getElementById('translateBtn');
