@@ -64,7 +64,10 @@ async fn main() -> Result<()> {
     });
 
     let session_layer = tower_sessions::SessionManagerLayer::new(session_store)
-        .with_secure(std::env::var("EULALIE_INSECURE_COOKIES").is_err())
+        // Cookies `Secure` uniquement si une URL publique HTTPS est déclarée.
+// En local (HTTP sur 127.0.0.1), pas de `Secure` — sinon le navigateur
+// refuse d'envoyer le cookie et la session ne persiste pas.
+.with_secure(std::env::var("EULALIE_PUBLIC_URL").map(|u| u.starts_with("https://")).unwrap_or(false))
         .with_same_site(tower_sessions::cookie::SameSite::Strict)
         .with_http_only(true)
         .with_expiry(tower_sessions::Expiry::OnInactivity(time::Duration::hours(12)));

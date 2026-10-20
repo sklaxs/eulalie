@@ -9,7 +9,7 @@ un atelier de traduction EPUB/PDF vers Markdown, entièrement en Rust.
   SQLite via SQLx (migrations incluses).
 - **Authentification** : Argon2id (crate `argon2`, implémentation de référence),
   sessions serveur via `tower-sessions` (store SQLx, cookie `HttpOnly`,
-  `SameSite=Strict`, `Secure` en production).
+  `SameSite=Strict`, `Secure` activé via `EULALIE_PUBLIC_URL` en production).
 - **Conteneur** : build multi-stage (Rust slim → Alpine), utilisateur non-root,
   `read_only`, `cap_drop: ALL`, `no-new-privileges`, healthcheck.
 
@@ -43,14 +43,16 @@ Variables d'environnement :
 |---|---|---|
 | `EULALIE_DB` | `/data/db/eulalie.db` | chemin SQLite |
 | `EULALIE_UPLOADS` | `/data/uploads` | répertoire des fichiers importés |
-| `EULALIE_INSECURE_COOKIES` | (absent) | à définir uniquement pour un test en HTTP local (désactive `Secure`) |
+| `EULALIE_PUBLIC_URL` | (absent) | URL publique en production ; si elle commence par `https://`, les cookies de session deviennent `Secure` (recommandé derrière un reverse proxy TLS) |
 | `RUST_LOG` | `eulalie=info` | verbosité des logs |
 
 ### Production
 
 En production, exposez derrière un reverse proxy TLS (Caddy, nginx, Traefik) :
-le port n'est publié que sur `127.0.0.1` par défaut dans le compose. Les cookies
-sont alors `Secure` automatiquement.
+le port n'est publié que sur `127.0.0.1` par défaut dans le compose. Définissez
+alors `EULALIE_PUBLIC_URL=https://votre-domaine` pour activer les cookies
+`Secure`. En HTTP local, aucun réglage n'est nécessaire : les cookies
+fonctionnent sans `Secure` (comportement par défaut).
 
 ## Sécurité (référentiel OWASP)
 
@@ -63,7 +65,7 @@ Mesures implémentées, point par point :
 
 ### A02 Cryptographic Failures
 - Mots de passe hachés en **Argon2id** (recommandation OWASP Password Storage).
-- Cookies de session `HttpOnly` + `SameSite=Strict` + `Secure` (sauf dev).
+- Cookies de session `HttpOnly` + `SameSite=Strict` + `Secure` automatique si `EULALIE_PUBLIC_URL` est en HTTPS.
 
 ### A03 Injection (SQLi, XSS)
 - **SQLi** : 100 % de requêtes préparées SQLx (bind de paramètres), aucune
