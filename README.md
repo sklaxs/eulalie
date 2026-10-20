@@ -13,11 +13,9 @@ un atelier de traduction EPUB/PDF vers Markdown, entièrement en Rust.
 - **Conteneur** : build multi-stage (Rust slim → Alpine), utilisateur non-root,
   `read_only`, `cap_drop: ALL`, `no-new-privileges`, healthcheck.
 
-```mermaid
 browser ──HTTP──> eulalie (Axum, :8080)
                     ├── SQLite (sessions, projets, chapitres, favoris)
                     └── /data/uploads (fichiers EPUB/PDF persistés)
-```
 
 Un seul conteneur suffit : la base SQLite est embarquée (pas de SGBD externe),
 les fichiers importés sont stockés sur un volume Docker.
