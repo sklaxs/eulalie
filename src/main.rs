@@ -544,6 +544,7 @@ async fn editor_page_inner(
             autosave: settings.autosave,
             shortcut_prev: settings.shortcut_prev,
             shortcut_next: settings.shortcut_next,
+            shortcut_preview: settings.shortcut_preview,
             images,
         }
         .render()
@@ -862,6 +863,7 @@ struct SettingsForm {
     autosave: Option<String>,
     shortcut_prev: Option<String>,
     shortcut_next: Option<String>,
+    shortcut_preview: Option<String>,
     translate_server: Option<String>,
 }
 
@@ -879,6 +881,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 autosave: autosave != 0,
                 shortcut_prev: "Alt+ArrowLeft".into(),
                 shortcut_next: "Alt+ArrowRight".into(),
+                shortcut_preview: "Alt+ArrowUp".into(),
                 translate_server: server,
             };
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&shortcuts) {
@@ -888,6 +891,9 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 if let Some(n) = v.get("next").and_then(|x| x.as_str()) {
                     s.shortcut_next = n.to_string();
                 }
+                if let Some(pr) = v.get("preview").and_then(|x| x.as_str()) {
+                    s.shortcut_preview = pr.to_string();
+                }
             }
             s
         }
@@ -895,6 +901,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             autosave: true,
             shortcut_prev: "Alt+ArrowLeft".into(),
             shortcut_next: "Alt+ArrowRight".into(),
+            shortcut_preview: "Alt+ArrowUp".into(),
             // Préréglage : le service libretranslate du docker-compose (interne).
             translate_server: Some("http://libretranslate:5000".into()),
         },
@@ -930,6 +937,7 @@ async fn save_settings(
     let shortcuts = serde_json::json!({
         "prev": sanitize_shortcut(form.shortcut_prev.as_deref().unwrap_or("Alt+ArrowLeft")),
         "next": sanitize_shortcut(form.shortcut_next.as_deref().unwrap_or("Alt+ArrowRight")),
+        "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("Alt+ArrowUp")),
     })
     .to_string();
     // http:// autorisé uniquement pour les adresses internes Docker

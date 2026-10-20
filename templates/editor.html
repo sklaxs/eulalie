@@ -16,13 +16,13 @@ nav a:hover{color:var(--accent2)}
 .layout{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;min-height:0}
 .pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border)}
 .pane:last-child{border-right:none}
-.pane-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
+.pane-head{display:flex;justify-content:space-between;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px;height:42px;box-sizing:border-box}
 .pane-head h2{margin:0;font-size:14px;color:var(--muted);font-weight:600}
 .pane-body{flex:1;overflow:auto;padding:18px 22px}
 #source{white-space:pre-wrap;color:var(--fg)}
 #source ::selection{background:rgba(139,124,246,.4)}
 .chapter-title{font-size:19px;font-weight:700;margin-bottom:14px;color:#fff}
-.toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;align-items:center}
+.toolbar{display:flex;gap:6px;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;align-items:center;min-height:42px;box-sizing:border-box}
 .toolbar button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer;line-height:1.4;min-height:28px;display:inline-flex;align-items:center;justify-content:center;gap:4px}
 .toolbar button:hover{border-color:var(--accent)}
 .toast{position:fixed;bottom:24px;right:24px;background:#2a1b25;border:1px solid rgba(255,80,80,.5);color:#ff9a9a;border-radius:10px;padding:12px 18px;font-size:14px;max-width:420px;display:none;z-index:100;box-shadow:0 8px 30px rgba(0,0,0,.5)}
@@ -141,6 +141,7 @@ textarea#editor:focus{outline:none}
 const AUTOSAVE = {{ autosave }};
 const SC_PREV = "{{ shortcut_prev }}";
 const SC_NEXT = "{{ shortcut_next }}";
+const SC_PREVIEW = "{{ shortcut_preview }}";
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 const sourcePane = document.getElementById('source');
@@ -237,8 +238,15 @@ if(t.length>1&&t.length<5000&&sourcePane.contains(sel.anchorNode)){
 selText=t;
 const r=sel.getRangeAt(0).getBoundingClientRect();
 translateBtn.style.display='block';
-translateBtn.style.left=Math.min(r.left+window.scrollX,window.innerWidth-130)+'px';
+// À droite de la sélection ; rabattu sous la sélection si pas assez de place.
+const bw=translateBtn.offsetWidth||120;
+if(r.right+8+bw<window.innerWidth){
+translateBtn.style.left=(r.right+window.scrollX+8)+'px';
+translateBtn.style.top=(r.top+window.scrollY-4)+'px';
+}else{
+translateBtn.style.left=Math.min(r.left+window.scrollX,window.innerWidth-bw-8)+'px';
 translateBtn.style.top=(r.bottom+window.scrollY+8)+'px';
+}
 }else{translateBtn.style.display='none';selText='';}
 });
 translateBtn.onclick=()=>{
@@ -267,8 +275,12 @@ return e.altKey===need.alt&&e.ctrlKey===need.ctrl&&e.shiftKey===need.shift&&e.me
 &&(key===''||(e.key.toLowerCase()===key.toLowerCase()));
 }
 document.addEventListener('keydown',e=>{
+// Ignorer les raccourcis pendant la saisie de texte dans un champ.
+const tag=(e.target.tagName||'').toLowerCase();
+if(tag==='input'||tag==='textarea'&&e.target.id!=='editor'){return;}
 if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n&&n.textContent.includes('▶'))n.click();}
 if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links.find(a=>a.textContent.includes('◀'));if(p)p.click();}
+if(matchShortcut(e,SC_PREVIEW)&&e.target.id==='editor'){e.preventDefault();togglePreview();}
 });
 
 // Zoom Ctrl+molette par panneau

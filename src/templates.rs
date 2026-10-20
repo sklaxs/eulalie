@@ -42,6 +42,7 @@ pub struct EditorTemplate {
     pub autosave: bool,
     pub shortcut_prev: String,
     pub shortcut_next: String,
+    pub shortcut_preview: String,
     pub images: Vec<ImageRow>,
 }
 
@@ -87,6 +88,7 @@ pub struct UserSettings {
     pub autosave: bool,
     pub shortcut_prev: String,
     pub shortcut_next: String,
+    pub shortcut_preview: String,
     pub translate_server: Option<String>,
 }
 
