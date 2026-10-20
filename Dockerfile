@@ -1,9 +1,11 @@
-# ---- Étape 1 : build (Rust sur Debian slim, gcc nécessaire pour sqlite) ----
-FROM rust:1-slim AS builder
+# ---- Étape 1 : build sur Alpine (musl) ----
+# Le runtime final est Alpine (musl) : il faut donc que le binaire soit
+# lui-même lié à musl, sinon "exec: no such file or directory" (chargeur
+# glibc /lib64/ld-linux-x86-64.so.2 absent d'Alpine).
+FROM rust:1-alpine AS builder
 WORKDIR /app
 
-# Dépendances système minimales pour compiler (libsqlite3 via sqlx bundled)
-RUN apt-get update && apt-get install -y --no-install-recommends pkg-config && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache musl-dev pkgconfig make
 
 # Cache des dépendances
 COPY Cargo.toml Cargo.lock ./
