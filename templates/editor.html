@@ -237,7 +237,11 @@ const form=document.getElementById('renameForm');
 const input=document.getElementById('renameInput');
 projTitle.style.display='none';form.style.display='flex';
 input.value=projTitle.textContent.trim();input.focus();input.select();
-input.onblur=()=>{form.style.display='none';projTitle.style.display='inline';};
+// Le blur ne masque que si on ne clique pas sur le bouton ✓ (mousedown sur le bouton
+// déclenche le blur AVANT le click : il faut donc ne pas masquer dans ce cas).
+let keepOpen=false;
+form.querySelector('button').addEventListener('mousedown',()=>{keepOpen=true;});
+input.onblur=()=>{if(keepOpen){keepOpen=false;return;}form.style.display='none';projTitle.style.display='inline';};
 input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.onblur=null;form.submit();}
 if(e.key==='Escape'){input.onblur=null;form.style.display='none';projTitle.style.display='inline';}};
 };
@@ -315,7 +319,7 @@ const tag=(e.target.tagName||'').toLowerCase();
 if(tag==='input'||tag==='textarea'&&e.target.id!=='editor'){return;}
 if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n&&n.textContent.includes('▶'))n.click();}
 if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links.find(a=>a.textContent.includes('◀'));if(p)p.click();}
-if(matchShortcut(e,SC_PREVIEW)&&e.target.id==='editor'){e.preventDefault();togglePreview();}
+if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();togglePreview();}
 });
 
 // Zoom Ctrl+molette par panneau

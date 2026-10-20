@@ -985,7 +985,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 autosave: autosave != 0,
                 shortcut_prev: "Alt+ArrowLeft".into(),
                 shortcut_next: "Alt+ArrowRight".into(),
-                shortcut_preview: "Alt+ArrowUp".into(),
+                shortcut_preview: "ALT+ArrowUp".into(),
                 translate_server: server,
             };
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&shortcuts) {
@@ -1005,7 +1005,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             autosave: true,
             shortcut_prev: "Alt+ArrowLeft".into(),
             shortcut_next: "Alt+ArrowRight".into(),
-            shortcut_preview: "Alt+ArrowUp".into(),
+            shortcut_preview: "ALT+ArrowUp".into(),
             // Préréglage : le service libretranslate du docker-compose (interne).
             translate_server: Some("http://libretranslate:5000".into()),
         },
@@ -1041,7 +1041,7 @@ async fn save_settings(
     let shortcuts = serde_json::json!({
         "prev": sanitize_shortcut(form.shortcut_prev.as_deref().unwrap_or("Alt+ArrowLeft")),
         "next": sanitize_shortcut(form.shortcut_next.as_deref().unwrap_or("Alt+ArrowRight")),
-        "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("Alt+ArrowUp")),
+        "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("ALT+ArrowUp")),
     })
     .to_string();
     // http:// autorisé uniquement pour les adresses internes Docker
