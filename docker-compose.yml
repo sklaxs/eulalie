@@ -34,7 +34,7 @@ services:
     image: libretranslate/libretranslate:latest
     container_name: eulalie-libretranslate
     restart: unless-stopped
-    command: --en --fr --disable-web-ui
+    command: --load-only en,fr --disable-web-ui
     expose:
       - "5000"          # interne au réseau compose uniquement, non publié
     volumes:
