@@ -43,9 +43,9 @@ input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border)
 </div>
 <div class="card">
 <h2>Raccourcis clavier</h2>
+<p class="hint">Format : modificateurs + touche, ex. <code>Alt+ArrowLeft</code>, <code>Ctrl+Shift+P</code>.</p>
 <label for="shortcut_prev">Chapitre / page précédente</label>
 <input type="text" name="shortcut_prev" id="shortcut_prev" value="{{ settings.shortcut_prev }}">
-<p class="hint">Format : modificateurs + touche, ex. <code>Alt+ArrowLeft</code>, <code>Ctrl+Shift+P</code>.</p>
 <label for="shortcut_next">Chapitre / page suivante</label>
 <input type="text" name="shortcut_next" id="shortcut_next" value="{{ settings.shortcut_next }}">
 <label for="shortcut_preview">Afficher / masquer l'aperçu</label>
@@ -56,10 +56,7 @@ input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border)
 <label for="translate_server">Serveur LibreTranslate (URL https://)</label>
 <input type="text" name="translate_server" id="translate_server" placeholder="http://libretranslate:5000"
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
-<p class="hint">Sélectionnez du texte dans le panneau de gauche : un bouton « Traduire » apparaît
-et insère la traduction dans l'éditeur. Préréglé sur le service LibreTranslate du
-docker-compose (interne à votre machine). Le premier appel télécharge les modèles
-EN→FR (~1 Go) — patientez une minute.</p>
+
 </div>
 <button class="btn" type="submit">Enregistrer</button>
 </form>

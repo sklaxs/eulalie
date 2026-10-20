@@ -39,7 +39,7 @@ input:focus{outline:2px solid var(--accent)}
 <label>Mot de passe</label><input type="password" name="password" required autocomplete="current-password">
 <button class="btn" type="submit">Se connecter</button>
 </form>
-<p class="alt">Pas encore de compte ? <a href="/register">S'enregistrer</a></p>
+{% if allow_register %}<p class="alt">Pas encore de compte ? <a href="/register">S'enregistrer</a></p>{% endif %}
 {% endif %}
 </div>
 </body>

@@ -7,6 +7,7 @@ use askama::Template;
 pub struct LoginTemplate {
     pub error: Option<String>,
     pub mode_register: bool,
+    pub allow_register: bool,
 }
 
 #[derive(Template)]
@@ -44,6 +45,14 @@ pub struct EditorTemplate {
     pub shortcut_next: String,
     pub shortcut_preview: String,
     pub images: Vec<ImageRow>,
+    pub langs: Vec<LangOption>,
+}
+
+#[derive(Clone)]
+pub struct LangOption {
+    pub code: String,
+    pub selected_src: bool,
+    pub selected_tgt: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -58,6 +67,8 @@ pub struct ProjectMeta {
     pub title: String,
     pub source_kind: String,
     pub source_title: String,
+    pub source_lang: String,
+    pub target_lang: String,
 }
 
 #[derive(sqlx::FromRow, Clone)]

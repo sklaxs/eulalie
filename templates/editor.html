@@ -59,7 +59,8 @@ textarea#editor:focus{outline:none}
 .img-card .img-thumb img{max-width:100%;height:70px;object-fit:contain;border-radius:6px}
 .img-card .name{font-size:11px;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:text}
 .img-card .name:hover{color:var(--accent2)}
-.img-card .rename-hint{font-size:9px;color:var(--muted);opacity:.6;margin-top:3px}
+.img-card .del{font-size:12px;margin-top:6px;cursor:pointer;opacity:.5}
+.img-card .del:hover{opacity:1;color:#ff6b6b}
 .upload-row{display:flex;gap:10px;align-items:center}
 .upload-row input[type=file]{color:var(--muted);font-size:13px}
 .empty-note{color:var(--muted);font-size:13px;margin-top:10px}
@@ -68,7 +69,21 @@ textarea#editor:focus{outline:none}
 <body>
 <header class="top">
 <span class="brand">Eulalie ✦</span>
-<span class="proj-title">{{ project.title }}</span>
+<span class="proj-title" id="projTitle" title="Cliquer pour renommer le projet">{{ project.title }}</span>
+<form method="post" action="/projects/{{ project.id }}" id="renameForm" style="display:none">
+<input type="text" name="title" id="renameInput" maxlength="120" style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px;font:inherit;width:280px">
+<button class="btn-sm" type="submit">✓</button>
+</form>
+<form method="post" action="/projects/{{ project.id }}/langs" id="langsForm" style="display:flex;gap:6px;align-items:center">
+<select name="source_lang" title="Langue source" style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px">
+{% for l in langs %}<option value="{{ l.code }}" {% if l.selected_src %}selected{% endif %}>{{ l.code }}</option>{% endfor %}
+</select>
+<span style="color:var(--muted)">→</span>
+<select name="target_lang" title="Langue cible" style="background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px">
+{% for l in langs %}<option value="{{ l.code }}" {% if l.selected_tgt %}selected{% endif %}>{{ l.code }}</option>{% endfor %}
+</select>
+<button class="btn-sm" type="submit">↻</button>
+</form>
 <nav>
 <a href="/settings">⚙ Paramètres</a>
 <a href="/">← Projets</a>
@@ -129,11 +144,11 @@ textarea#editor:focus{outline:none}
 <img src="/images/{{ img.id }}" loading="lazy" alt="{{ img.filename }}">
 </div>
 <div class="name" title="Cliquer pour renommer" onclick="renameImage({{ img.id }}, this)">{{ img.filename }}</div>
-<div class="rename-hint">✎ renommer · ▣ insérer</div>
+<div class="del" onclick="deleteImage({{ img.id }}, this)" title="Supprimer l'image">🗑</div>
 </div>
 {% endfor %}
 </div>
-<p class="hint empty-note">Cliquez sur le nom pour renommer, sur l'image pour l'insérer au curseur.</p>
+
 </div>
 </div>
 </div>
@@ -196,9 +211,10 @@ const note=document.getElementById('imgEmptyNote');if(note)note.remove();
 const card=document.createElement('div');
 card.className='img-card';card.dataset.id=img.id;card.dataset.name=img.filename;
 card.innerHTML='<div class="img-thumb"><img src="/images/'+img.id+'" alt=""></div>'
-+'<div class="name" title="Cliquer pour renommer"></div><div class="rename-hint">✎ renommer · ▣ insérer</div>';
++'<div class="name" title="Cliquer pour renommer"></div><div class="del" title="Supprimer">🗑</div>';
 card.querySelector('.name').textContent=img.filename;
 card.querySelector('.name').onclick=()=>renameImage(img.id,card.querySelector('.name'));
+card.querySelector('.del').onclick=()=>deleteImage(img.id,card.querySelector('.del'));
 card.querySelector('.img-thumb').onclick=()=>insertImage(img.id,card.dataset.name);
 grid.prepend(card);
 e.target.reset();
@@ -206,6 +222,25 @@ e.target.reset();
 .catch(()=>{status.textContent='Échec de l\'envoi (PNG, JPEG ou GIF uniquement).'})
 .finally(()=>btn.disabled=false);
 });
+
+function deleteImage(id,el){
+if(!confirm('Supprimer cette image ? Les références déjà insérées dans le texte ne seront plus affichées.'))return;
+fetch('/images/'+id+'/delete',{method:'POST'})
+.then(r=>{if(!r.ok)throw 0;el.closest('.img-card').remove();showToast('Image supprimée.',true);})
+.catch(()=>showToast('Suppression impossible.'));
+}
+
+// Renommage du projet : le titre devient un champ de saisie au clic.
+const projTitle=document.getElementById('projTitle');
+projTitle.onclick=()=>{
+const form=document.getElementById('renameForm');
+const input=document.getElementById('renameInput');
+projTitle.style.display='none';form.style.display='flex';
+input.value=projTitle.textContent.trim();input.focus();input.select();
+input.onblur=()=>{form.style.display='none';projTitle.style.display='inline';};
+input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();input.onblur=null;form.submit();}
+if(e.key==='Escape'){input.onblur=null;form.style.display='none';projTitle.style.display='inline';}};
+};
 
 // Renommage inline : clic sur le nom → champ éditable → Enter pour valider.
 function renameImage(id,nameEl){
@@ -252,7 +287,7 @@ translateBtn.style.top=(r.bottom+window.scrollY+8)+'px';
 translateBtn.onclick=()=>{
 if(!selText)return;
 translateBtn.textContent='… traduction';translateBtn.disabled=true;
-fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)})
+fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)+'&project_id={{ project.id }}'})
 .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
 .then(txt=>{insert(txt+'\n');resetTranslateBtn();})
 .catch(e=>{resetTranslateBtn();

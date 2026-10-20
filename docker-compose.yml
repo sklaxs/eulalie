@@ -10,6 +10,8 @@ services:
       # En production derrière un reverse proxy HTTPS, définir l'URL publique
       # pour activer les cookies `Secure` :
       # - EULALIE_PUBLIC_URL=https://traduction.exemple.fr
+      # Verrouiller les inscriptions (une fois votre compte créé) :
+      # - EULALIE_DISABLE_REGISTRATION=1
     volumes:
       # ── Base SQLite ──
       # Option A (défaut) : volume Docker nommé — sauvegarde via

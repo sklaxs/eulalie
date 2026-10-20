@@ -2,7 +2,7 @@ mod auth;
 mod bookextract;
 mod templates;
 
-use templates::UserSettings;
+use templates::{LangOption, UserSettings};
 
 use crate::bookextract::SourceKind;
 use templates::*;
@@ -89,6 +89,8 @@ async fn main() -> Result<()> {
         .route("/projects/:id/images", post(upload_image))
         .route("/images/:image_id", get(serve_image))
         .route("/images/:image_id/rename", post(rename_image))
+        .route("/images/:image_id/delete", post(delete_image))
+        .route("/projects/:id/langs", post(set_project_langs))
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
@@ -124,22 +126,33 @@ async fn login_page(session: Session) -> impl IntoResponse {
     if session_user(&session).await.is_some() {
         return Redirect::to("/").into_response();
     }
+    let allow_register = !registration_disabled();
     Html(LoginTemplate {
         error: None,
         mode_register: false,
+        allow_register,
     }
     .render()
     .unwrap())
     .into_response()
 }
 
-async fn register_page() -> Html<String> {
+fn registration_disabled() -> bool {
+    std::env::var("EULALIE_DISABLE_REGISTRATION").is_ok()
+}
+
+async fn register_page() -> impl IntoResponse {
+    if registration_disabled() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
     Html(LoginTemplate {
         error: None,
         mode_register: true,
+        allow_register: true,
     }
     .render()
     .unwrap())
+    .into_response()
 }
 
 #[derive(Deserialize)]
@@ -158,12 +171,16 @@ async fn register(
     session: Session,
     Form(form): Form<Credentials>,
 ) -> impl IntoResponse {
+    if registration_disabled() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
     let username = form.username.trim().to_string();
     if !valid_username(&username) {
         return Html(
             LoginTemplate {
                 error: Some("Nom d'utilisateur : 3–32 caractères alphanumériques, - _ .".into()),
                 mode_register: true,
+                allow_register: true,
             }
             .render()
             .unwrap(),
@@ -175,6 +192,7 @@ async fn register(
             LoginTemplate {
                 error: Some("Mot de passe : 10 caractères minimum.".into()),
                 mode_register: true,
+                allow_register: true,
             }
             .render()
             .unwrap(),
@@ -204,6 +222,7 @@ async fn register(
             LoginTemplate {
                 error: Some("Ce nom d'utilisateur est déjà pris.".into()),
                 mode_register: true,
+                allow_register: true,
             }
             .render()
             .unwrap(),
@@ -240,6 +259,7 @@ async fn login(
             LoginTemplate {
                 error: Some("Identifiants invalides.".into()),
                 mode_register: false,
+                allow_register: !registration_disabled(),
             }
             .render()
             .unwrap(),
@@ -433,7 +453,7 @@ async fn load_project(
     project_id: i64,
 ) -> Result<ProjectMeta, Response> {
     let meta: Option<ProjectMeta> = sqlx::query_as(
-        "SELECT id, title, source_kind, source_title FROM projects WHERE id = ? AND user_id = ?",
+        "SELECT id, title, source_kind, source_title, source_lang, target_lang FROM projects WHERE id = ? AND user_id = ?",
     )
     .bind(project_id)
     .bind(user_id)
@@ -529,6 +549,15 @@ async fn editor_page_inner(
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
+    let all_langs = ["en", "fr", "de", "es", "it", "pt", "nl", "ru", "zh", "ja", "ar"];
+    let langs: Vec<LangOption> = all_langs
+        .iter()
+        .map(|code| LangOption {
+            code: code.to_string(),
+            selected_src: *code == project.source_lang,
+            selected_tgt: *code == project.target_lang,
+        })
+        .collect();
     Html(
         EditorTemplate {
             project,
@@ -546,6 +575,7 @@ async fn editor_page_inner(
             shortcut_next: settings.shortcut_next,
             shortcut_preview: settings.shortcut_preview,
             images,
+            langs,
         }
         .render()
         .unwrap(),
@@ -822,6 +852,80 @@ async fn rename_image(
     }
 }
 
+#[derive(Deserialize)]
+struct LangsForm {
+    source_lang: String,
+    target_lang: String,
+}
+
+/// Langues acceptées (sous-ensemble des modèles Argos courants).
+const LANGS: &[&str] = &["en", "fr", "de", "es", "it", "pt", "nl", "ru", "zh", "ja", "ar"];
+
+fn valid_lang(s: &str) -> Option<&'static str> {
+    LANGS.iter().find(|l| **l == s).copied()
+}
+
+async fn set_project_langs(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    Form(form): Form<LangsForm>,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let (Some(src), Some(tgt)) = (valid_lang(&form.source_lang), valid_lang(&form.target_lang))
+    else {
+        return (StatusCode::BAD_REQUEST, "langue non prise en charge").into_response();
+    };
+    if src == tgt {
+        return (StatusCode::BAD_REQUEST, "langues identiques").into_response();
+    }
+    let _ = sqlx::query("UPDATE projects SET source_lang = ?, target_lang = ? WHERE id = ?")
+        .bind(src)
+        .bind(tgt)
+        .bind(project_id)
+        .execute(&state.db)
+        .await;
+    Redirect::to(&format!("/projects/{project_id}/chapter/0")).into_response()
+}
+
+async fn delete_image(
+    State(state): State<SharedState>,
+    Path(image_id): Path<i64>,
+    session: Session,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    let row: Option<String> = sqlx::query_scalar(
+        "SELECT i.stored_path FROM project_images i
+         JOIN projects p ON p.id = i.project_id
+         WHERE i.id = ? AND p.user_id = ?",
+    )
+    .bind(image_id)
+    .bind(user.0)
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(None);
+    let Some(path) = row else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let res = sqlx::query("DELETE FROM project_images WHERE id = ?")
+        .bind(image_id)
+        .execute(&state.db)
+        .await;
+    if res.is_ok() {
+        let _ = tokio::fs::remove_file(&path).await;
+        ([(header::CONTENT_TYPE, "application/json")], "{}").into_response()
+    } else {
+        server_error()
+    }
+}
+
 async fn serve_image(
     State(state): State<SharedState>,
     Path(image_id): Path<i64>,
@@ -997,6 +1101,7 @@ fn sanitize_shortcut(s: &str) -> String {
 #[derive(Deserialize)]
 struct TranslateForm {
     text: String,
+    project_id: Option<i64>,
 }
 
 async fn translate_text(
@@ -1020,10 +1125,26 @@ async fn translate_text(
     .flatten()
     .flatten()
     .unwrap_or_else(|| "http://libretranslate:5000".into());
+    // Langues du projet si précisé (et appartenant à l'utilisateur), sinon en→fr.
+    let (mut source, mut target) = ("en".to_string(), "fr".to_string());
+    if let Some(pid) = form.project_id {
+        let langs: Option<(String, String)> = sqlx::query_as(
+            "SELECT source_lang, target_lang FROM projects WHERE id = ? AND user_id = ?",
+        )
+        .bind(pid)
+        .bind(user.0)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None);
+        if let Some((s, tg)) = langs {
+            source = s;
+            target = tg;
+        }
+    }
     let body = serde_json::json!({
         "q": form.text,
-        "source": "en",
-        "target": "fr",
+        "source": source,
+        "target": target,
         "format": "text",
     });
     let res = tokio::task::spawn_blocking(move || -> Result<serde_json::Value, String> {

@@ -44,6 +44,12 @@ Variables d'environnement :
 | `EULALIE_DB` | `/data/db/eulalie.db` | chemin SQLite |
 | `EULALIE_UPLOADS` | `/data/uploads` | répertoire des fichiers importés |
 | `EULALIE_PUBLIC_URL` | (absent) | URL publique en production ; si elle commence par `https://`, les cookies de session deviennent `Secure` (recommandé derrière un reverse proxy TLS) |
+| `EULALIE_DISABLE_REGISTRATION` | (absent) | si définie (ex. `=1`), les inscriptions sont désactivées : `/register` renvoie 404 et le lien disparaît de la page de connexion |
+
+**Langues de traduction** : chaque projet a sa paire source→cible (par défaut en→fr),
+modifiable dans l'en-tête de l'éditeur (sélecteurs + ↻). Le bouton « Traduire » utilise
+les langues du projet courant. Langues disponibles : en, fr, de, es, it, pt, nl, ru, zh, ja, ar
+(sous réserve des modèles chargés dans LibreTranslate : `--load-only en,fr` par défaut).
 | `RUST_LOG` | `eulalie=info` | verbosité des logs |
 
 ### Production
