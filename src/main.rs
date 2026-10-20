@@ -82,6 +82,9 @@ async fn main() -> Result<()> {
         .route("/projects/:id/chapter/:idx/preview", post(preview_chapter))
         .route("/projects/:id/export.md", get(export_markdown))
         .route("/healthz", get(healthz))
+        // Limite de corps de requête alignée sur MAX_UPLOAD (Axum : 2 Mo par défaut,
+        // trop bas pour un EPUB/PDF réel).
+        .layer(axum::extract::DefaultBodyLimit::max(MAX_UPLOAD))
         .layer(session_layer)
         .with_state(state);
 
@@ -299,11 +302,23 @@ async fn upload_project(
                         .into_response();
                 };
                 let mut data = Vec::new();
-                while let Some(chunk) = field.chunk().await.unwrap_or(None) {
-                    data.extend_from_slice(&chunk);
-                    if data.len() > MAX_UPLOAD {
-                        return (StatusCode::PAYLOAD_TOO_LARGE, "fichier trop volumineux (max 64 Mo)")
-                            .into_response();
+                // Toute erreur de lecture interrompt l'import : ne jamais
+                // stocker un fichier partiellement reçu (corrompu).
+                loop {
+                    match field.chunk().await {
+                        Ok(Some(chunk)) => {
+                            data.extend_from_slice(&chunk);
+                            if data.len() > MAX_UPLOAD {
+                                return (StatusCode::PAYLOAD_TOO_LARGE, "fichier trop volumineux (max 64 Mo)")
+                                    .into_response();
+                            }
+                        }
+                        Ok(None) => break,
+                        Err(e) => {
+                            tracing::error!("lecture multipart interrompue : {e}");
+                            return (StatusCode::BAD_REQUEST, "réception du fichier interrompue, réessayez")
+                                .into_response();
+                        }
                     }
                 }
                 if !bookextract::magic_matches(kind, &data) {
