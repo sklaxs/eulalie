@@ -119,6 +119,24 @@ cargo run   # écoute sur :8080, crée eulalie.db
 cargo test  # tests unitaires (extraction, auth, assainissement Markdown)
 ```
 
+## Fonctionnalités récentes
+
+- **Export Markdown sans titres** : seules vos traductions sont exportées,
+  séparées par `---` ; les titres de chapitres/pages ne sont plus repris.
+- **Images par projet** : bouton 🖼 dans l'éditeur → téléversez PNG/JPEG/GIF
+  (magic bytes vérifiés) ; cliquez sur une image pour l'insérer en Markdown ;
+  servies sur `/images/:id` avec contrôle de propriété par utilisateur.
+- **Page Paramètres** (⚙ dans l'en-tête) :
+  - sauvegarde automatique ON/OFF (si OFF, un bouton « 💾 Sauvegarder »
+    apparaît dans la barre d'outils, même design que les autres) ;
+  - raccourcis clavier personnalisables (chapitre précédent/suivant) ;
+  - serveur LibreTranslate pour la traduction à la sélection.
+- **Traduction EN→FR** : sélectionnez du texte dans le panneau de gauche,
+  un bouton « 🌍 Traduire » apparaît près de la sélection ; la traduction
+  est insérée au curseur. Passe par le serveur (endpoint `/translate`,
+  timeout 10 s, contrôle de session) vers LibreTranslate — auto-hébergeable
+  via le service optionnel du docker-compose.
+
 ## Limites
 
 - PDF : extraction texte uniquement (pas de rendu page).

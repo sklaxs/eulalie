@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ current.title }} — Eulalie</title>
 <style>
-:root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147}
+:root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147;--ok:#3dd68c}
 *{box-sizing:border-box}
 body{margin:0;font:15px/1.6 -apple-system,'Segoe UI',Roboto,Inter,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;height:100vh}
 header.top{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);gap:14px}
@@ -20,26 +20,44 @@ nav a:hover{color:var(--accent2)}
 .pane-head h2{margin:0;font-size:14px;color:var(--muted);font-weight:600}
 .pane-body{flex:1;overflow:auto;padding:18px 22px}
 #source{white-space:pre-wrap;color:var(--fg)}
-#source h4{margin:0 0 12px;font-size:18px;color:#fff}
+#source ::selection{background:rgba(139,124,246,.4)}
 .chapter-title{font-size:19px;font-weight:700;margin-bottom:14px;color:#fff}
-.toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;align-items:center}
 .toolbar button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer}
 .toolbar button:hover{border-color:var(--accent)}
 textarea#editor{flex:1;border:none;border-radius:0;background:var(--bg);color:var(--fg);font:14px/1.65 ui-monospace,'Cascadia Code',monospace;padding:18px 22px;resize:none}
 textarea#editor:focus{outline:none}
 #preview{font-size:15px;line-height:1.7}
 #preview h1,#preview h2,#preview h3{color:#fff;margin-top:1.2em}
+#preview img{max-width:100%;border-radius:8px}
 #preview table{border-collapse:collapse;margin:12px 0}
 #preview th,#preview td{border:1px solid var(--border);padding:6px 12px}
 #preview blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:4px 14px;color:var(--muted)}
 .navbtns{display:flex;gap:8px;align-items:center}
-.navbtns .btn-sm{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;text-decoration:none}
-.navbtns .btn-sm:hover{border-color:var(--accent)}
+.btn-sm{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;text-decoration:none}
+.btn-sm:hover{border-color:var(--accent)}
+.btn-sm.primary{background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none}
 .counter{color:var(--muted);font-size:13px}
-.zoom{display:flex;gap:4px;align-items:center}
-.zoom button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:14px}
 .saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
 .saved.show{opacity:1}
+/* bouton Traduire flottant sur la sélection */
+#translateBtn{position:fixed;display:none;background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:50}
+#translateBtn:hover{filter:brightness(1.15)}
+/* modal images */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:14px;width:min(640px,92vw);max-height:84vh;display:flex;flex-direction:column}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)}
+.modal-head h3{margin:0;font-size:16px}
+.modal-body{padding:16px 20px;overflow:auto}
+.img-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;margin-top:12px}
+.img-card{border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;cursor:pointer;background:var(--bg3)}
+.img-card:hover{border-color:var(--accent)}
+.img-card img{max-width:100%;height:70px;object-fit:contain;border-radius:6px}
+.img-card .name{font-size:11px;color:var(--muted);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.upload-row{display:flex;gap:10px;align-items:center}
+.upload-row input[type=file]{color:var(--muted);font-size:13px}
+.empty-note{color:var(--muted);font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -47,12 +65,10 @@ textarea#editor:focus{outline:none}
 <span class="brand">Eulalie ✦</span>
 <span class="proj-title">{{ project.title }}</span>
 <nav>
+<a href="/settings">⚙ Paramètres</a>
 <a href="/">← Projets</a>
 <a href="/projects/{{ project.id }}/export.md" download>Exporter .md</a>
 </nav>
-<form method="post" action="/projects/{{ project.id }}" style="display:flex;gap:8px"
-onsubmit="this.style.display='none';document.getElementById('renameRow').style.display='flex'">
-</form>
 </header>
 <div class="layout">
 <section class="pane">
@@ -73,34 +89,64 @@ onsubmit="this.style.display='none';document.getElementById('renameRow').style.d
 <div class="toolbar">
 <button onclick="wrap('**','**')" title="Gras"><b>B</b></button>
 <button onclick="wrap('*','*')" title="Italique"><i>I</i></button>
+<button onclick="insert('\n\n# Titre\n')" title="Titre">H1</button>
+<button onclick="insert('\n\n## Titre\n')" title="Sous-titre">H2</button>
 <button onclick="insert('\n\n::: center\n\n:::\n')" title="Centrer">⇔</button>
 <button onclick="insert('\n| Colonne 1 | Colonne 2 |\n|---|---|\n|  |  |\n')" title="Tableau">▤</button>
-<button onclick="insert('![alt](chemin)')" title="Image">🖼</button>
+<button id="imgBtn" title="Images">🖼</button>
 <button onclick="insert('[texte](https://)')" title="Lien">🔗</button>
 <span style="flex:1"></span>
-<button id="togglePreview" onclick="togglePreview()">👁 Aperçu</button>
+<button id="togglePreview">👁 Aperçu</button>
+{% if !autosave %}<button id="saveBtn" class="primary-btn" onclick="saveNow()" style="background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:6px;font-weight:600">💾 Sauvegarder</button>{% endif %}
 </div>
 <textarea id="editor" spellcheck="true">{{ current_markdown }}</textarea>
 <div id="preview" style="display:none" class="pane-body"></div>
 <div class="pane-head">
 <span id="saveStatus" class="saved">✓ enregistré</span>
 <span style="flex:1"></span>
-<button class="btn-sm" onclick="save(true)">💾 Sauvegarder</button>
 </div>
 </section>
 </div>
+<button id="translateBtn">🌍 Traduire</button>
+<div class="modal-bg" id="imgModal">
+<div class="modal">
+<div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
+<div class="modal-body">
+<form class="upload-row" method="post" action="/projects/{{ project.id }}/images" enctype="multipart/form-data">
+<input type="file" name="file" accept=".png,.jpg,.jpeg,.gif" required>
+<button class="btn-sm" type="submit">Téléverser</button>
+</form>
+{% if images.is_empty() %}
+<p class="empty-note">Aucune image pour l'instant — téléversez une image, elle sera disponible dans tous les chapitres du projet.</p>
+{% else %}
+<div class="img-grid">
+{% for img in images %}
+<div class="img-card" onclick="insertImage({{ img.id }}, '{{ img.filename }}')">
+<img src="/images/{{ img.id }}" loading="lazy" alt="{{ img.filename }}">
+<div class="name">{{ img.filename }}</div>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+<p class="hint empty-note">Cliquez sur une image pour l'insérer à l'emplacement du curseur.</p>
+</div>
+</div>
+</div>
 <script>
-let zoom = 1;
+const AUTOSAVE = {{ autosave }};
+const SC_PREV = "{{ shortcut_prev }}";
+const SC_NEXT = "{{ shortcut_next }}";
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
+const sourcePane = document.getElementById('source');
+
 function wrap(b,a){const s=editor.selectionStart,e=editor.selectionEnd;
-editor.setRangeText(b+a,e,e,'end');
-editor.setRangeText(editor.value.slice(s, e), s, s+ (b+a).length, 'end');
-editor.setRangeText(b,s,s,'end');
-editor.setRangeText(a,s,s+ (b+a).length+0,'end');
-editor.focus();recompute();}
-function insert(t){const s=editor.selectionStart;editor.setRangeText(t,s,s,'end');editor.focus();}
-function recompute(){}
+const sel=editor.value.slice(s,e);
+editor.setRangeText(b+sel+a,s,e,'end');
+const np=s+b.length;editor.setSelectionRange(np,np+sel.length);editor.focus();}
+function insert(t){const s=editor.selectionStart;editor.setRangeText(t,s,s,'end');editor.focus();scheduleSave();}
+function insertImage(id,name){insert('!['+name+'](/images/'+id+')');closeImgModal();}
+
 let previewOn=false;
 function togglePreview(){previewOn=!previewOn;
 if(previewOn){editor.style.display='none';preview.style.display='block';
@@ -109,19 +155,67 @@ fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/preview',{method:'PO
 document.getElementById('togglePreview').textContent='✎ Rédaction';}
 else{editor.style.display='block';preview.style.display='none';
 document.getElementById('togglePreview').textContent='👁 Aperçu';}}
+
 let saveTimer=null;
-function save(show){clearTimeout(saveTimer);
+function scheduleSave(){if(!AUTOSAVE)return;clearTimeout(saveTimer);saveTimer=setTimeout(saveNow,1200);}
+function saveNow(){clearTimeout(saveTimer);
 fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(editor.value)})
 .then(()=>{const s=document.getElementById('saveStatus');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1500);});}
-editor.addEventListener('input',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(()=>save(),1200);});
-// Zoom Ctrl+molette sur chaque panneau
+editor.addEventListener('input',scheduleSave);
+window.addEventListener('beforeunload',()=>{if(editor.value)navigator.sendBeacon('/projects/{{ project.id }}/chapter/{{ current_idx }}/save',new Blob([new URLSearchParams({markdown:editor.value})],{type:'application/x-www-form-urlencoded'}));});
+
+// Images modal
+document.getElementById('imgBtn').onclick=()=>document.getElementById('imgModal').classList.add('show');
+function closeImgModal(){document.getElementById('imgModal').classList.remove('show');}
+document.getElementById('imgModal').addEventListener('click',e=>{if(e.target.id==='imgModal')closeImgModal();});
+
+// Traduction à la sélection (panneau gauche)
+const translateBtn=document.getElementById('translateBtn');
+let selText='';
+document.addEventListener('selectionchange',()=>{
+const sel=window.getSelection();
+const t=sel?sel.toString().trim():'';
+if(t.length>1&&t.length<5000&&sourcePane.contains(sel.anchorNode)){
+selText=t;
+const r=sel.getRangeAt(0).getBoundingClientRect();
+translateBtn.style.display='block';
+translateBtn.style.left=Math.min(r.left+window.scrollX,window.innerWidth-130)+'px';
+translateBtn.style.top=(r.bottom+window.scrollY+8)+'px';
+}else{translateBtn.style.display='none';selText='';}
+});
+translateBtn.onclick=()=>{
+if(!selText)return;
+translateBtn.textContent='… traduction';
+fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)})
+.then(r=>{if(!r.ok)throw 0;return r.text()})
+.then(txt=>{insert(txt+'\n');translateBtn.textContent='🌍 Traduire';translateBtn.style.display='none';})
+.catch(()=>{translateBtn.textContent='⚠ erreur';setTimeout(()=>{translateBtn.textContent='🌍 Traduire';translateBtn.style.display='none';},1500);});
+};
+
+// Raccourcis personnalisés
+function matchShortcut(e,combo){
+const parts=combo.split('+').map(p=>p.trim());
+let need={alt:false,ctrl:false,shift:false,meta:false};
+let key='';
+for(const p of parts){
+const l=p.toLowerCase();
+if(l==='alt')need.alt=true;else if(l==='ctrl'||l==='control')need.ctrl=true;
+else if(l==='shift')need.shift=true;else if(l==='meta')need.meta=true;
+else key=p;
+}
+return e.altKey===need.alt&&e.ctrlKey===need.ctrl&&e.shiftKey===need.shift&&e.metaKey===need.meta
+&&(key===''||(e.key.toLowerCase()===key.toLowerCase()));
+}
+document.addEventListener('keydown',e=>{
+if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n&&n.textContent.includes('▶'))n.click();}
+if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links.find(a=>a.textContent.includes('◀'));if(p)p.click();}
+});
+
+// Zoom Ctrl+molette par panneau
 document.querySelectorAll('.pane').forEach(pane=>{pane.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();
 const body=pane.querySelector('.pane-body,textarea');let z=parseFloat(body.dataset.zoom||'1');
 z=e.deltaY<0?Math.min(2,z+0.1):Math.max(0.5,z-0.1);body.dataset.zoom=z;
 body.style.fontSize=(15*z)+'px';}},{passive:false});});
-// Alt+flèches
-document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowRight'){const n=document.querySelector('.navbtns a:last-child');if(n)n.click();}
-if(e.altKey&&e.key==='ArrowLeft'){const links=[...document.querySelectorAll('.navbtns a')];if(links.length)links[0].click();}});
 </script>
 </body>
 </html>

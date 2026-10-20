@@ -2,6 +2,8 @@ mod auth;
 mod bookextract;
 mod templates;
 
+use templates::UserSettings;
+
 use crate::bookextract::SourceKind;
 use templates::*;
 use anyhow::{Context, Result};
@@ -84,6 +86,10 @@ async fn main() -> Result<()> {
         .route("/projects/:id/chapter/:idx/save", post(save_chapter))
         .route("/projects/:id/chapter/:idx/preview", post(preview_chapter))
         .route("/projects/:id/export.md", get(export_markdown))
+        .route("/projects/:id/images", post(upload_image))
+        .route("/images/:image_id", get(serve_image))
+        .route("/settings", get(settings_page).post(save_settings))
+        .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
         // Limite de corps de requête alignée sur MAX_UPLOAD (Axum : 2 Mo par défaut,
         // trop bas pour un EPUB/PDF réel).
@@ -514,6 +520,14 @@ async fn editor_page_inner(
     .unwrap_or_default();
     let prev_idx = idx.checked_sub(1);
     let next_idx = if idx + 1 < chapters.len() { Some(idx + 1) } else { None };
+    let settings = load_settings(&state.db, user.0).await;
+    let images: Vec<ImageRow> = sqlx::query_as(
+        "SELECT id, filename FROM project_images WHERE project_id = ? ORDER BY id DESC",
+    )
+    .bind(project_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
     Html(
         EditorTemplate {
             project,
@@ -526,6 +540,10 @@ async fn editor_page_inner(
             rendered_markdown: rendered,
             next_idx,
             prev_idx,
+            autosave: settings.autosave,
+            shortcut_prev: settings.shortcut_prev,
+            shortcut_next: settings.shortcut_next,
+            images,
         }
         .render()
         .unwrap(),
@@ -666,22 +684,21 @@ async fn export_markdown(
     if load_project(&state, user.0, project_id).await.is_err() {
         return StatusCode::NOT_FOUND.into_response();
     }
-    let rows: Vec<(String, String)> = sqlx::query_as(
-        "SELECT title, markdown FROM chapters WHERE project_id = ? AND markdown != '' ORDER BY idx",
+    let rows: Vec<String> = sqlx::query_scalar(
+        "SELECT markdown FROM chapters WHERE project_id = ? AND markdown != '' ORDER BY idx",
     )
     .bind(project_id)
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
-    let title: String = sqlx::query_scalar("SELECT source_title FROM projects WHERE id = ?")
-        .bind(project_id)
-        .fetch_one(&state.db)
-        .await
-        .unwrap_or_else(|_| "Traduction".into());
-    let mut md = format!("# {title}\n\n");
-    for (ch_title, text) in rows {
-        md.push_str(&format!("## {ch_title}\n\n{text}\n\n"));
+    // Export du contenu uniquement — sans titre du document ni titres de
+    // chapitres (les titres appartiennent au texte rédigé par l'utilisateur).
+    let mut md = String::new();
+    for text in rows {
+        md.push_str(&text);
+        md.push_str("\n\n---\n\n");
     }
+    md = md.trim_end_matches("---\n\n").trim_end().to_string();
     (
         [
             (header::CONTENT_TYPE, "text/markdown; charset=utf-8"),
@@ -693,4 +710,283 @@ async fn export_markdown(
         md,
     )
         .into_response()
+}
+
+// ---------- images de projet ----------
+
+const ALLOWED_IMAGE_MIME: &[(&str, &[u8])] = &[
+    ("image/png", &[0x89, b'P', b'N', b'G']),
+    ("image/jpeg", &[0xFF, 0xD8, 0xFF]),
+    ("image/gif", b"GIF8"),
+];
+
+async fn upload_image(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let Some(mut field) = multipart.next_field().await.ok().flatten() else {
+        return (StatusCode::BAD_REQUEST, "fichier manquant").into_response();
+    };
+    let filename = field.file_name().unwrap_or("image").chars().take(120).collect::<String>();
+    let mut data = Vec::new();
+    loop {
+        match field.chunk().await {
+            Ok(Some(chunk)) => {
+                data.extend_from_slice(&chunk);
+                if data.len() > MAX_UPLOAD {
+                    return (StatusCode::PAYLOAD_TOO_LARGE, "image trop volumineuse").into_response();
+                }
+            }
+            Ok(None) => break,
+            Err(_) => return (StatusCode::BAD_REQUEST, "réception interrompue").into_response(),
+        }
+    }
+    let Some((mime, _)) = ALLOWED_IMAGE_MIME.iter().find(|(_, magic)| data.starts_with(magic)) else {
+        return (StatusCode::BAD_REQUEST, "seuls PNG, JPEG et GIF sont acceptés").into_response();
+    };
+    let stored_name = format!("{}.{}", rand_name(), mime.strip_prefix("image/").unwrap_or("bin"));
+    let stored_path = state.uploads_dir.join(&stored_name);
+    if tokio::fs::write(&stored_path, &data).await.is_err() {
+        return server_error();
+    }
+    let res = sqlx::query(
+        "INSERT INTO project_images (project_id, filename, stored_path, mime) VALUES (?, ?, ?, ?)",
+    )
+    .bind(project_id)
+    .bind(&filename)
+    .bind(stored_path.to_string_lossy().to_string())
+    .bind(*mime)
+    .execute(&state.db)
+    .await;
+    match res {
+        Ok(_) => Redirect::to(&format!("/projects/{project_id}")).into_response(),
+        Err(_) => server_error(),
+    }
+}
+
+async fn serve_image(
+    State(state): State<SharedState>,
+    Path(image_id): Path<i64>,
+    session: Session,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    let row: Option<(String, String)> = sqlx::query_as(
+        "SELECT i.stored_path, i.mime FROM project_images i
+         JOIN projects p ON p.id = i.project_id
+         WHERE i.id = ? AND p.user_id = ?",
+    )
+    .bind(image_id)
+    .bind(user.0)
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(None);
+    let Some((path, mime)) = row else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match tokio::fs::read(&path).await {
+        Ok(bytes) => (
+            [
+                (header::CONTENT_TYPE, mime),
+                (header::CACHE_CONTROL, "private, max-age=86400".to_string()),
+            ],
+            bytes,
+        )
+            .into_response(),
+        Err(_) => StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+// ---------- paramètres ----------
+
+#[derive(Deserialize, Default)]
+struct SettingsForm {
+    autosave: Option<String>,
+    shortcut_prev: Option<String>,
+    shortcut_next: Option<String>,
+    translate_server: Option<String>,
+}
+
+async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
+    let row: Option<(i64, String, Option<String>)> = sqlx::query_as(
+        "SELECT s.autosave, s.shortcuts, s.translate_server FROM user_settings s WHERE s.user_id = ?",
+    )
+    .bind(user_id)
+    .fetch_optional(db)
+    .await
+    .unwrap_or(None);
+    match row {
+        Some((autosave, shortcuts, server)) => {
+            let mut s = UserSettings {
+                autosave: autosave != 0,
+                shortcut_prev: "Alt+ArrowLeft".into(),
+                shortcut_next: "Alt+ArrowRight".into(),
+                translate_server: server,
+            };
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&shortcuts) {
+                if let Some(p) = v.get("prev").and_then(|x| x.as_str()) {
+                    s.shortcut_prev = p.to_string();
+                }
+                if let Some(n) = v.get("next").and_then(|x| x.as_str()) {
+                    s.shortcut_next = n.to_string();
+                }
+            }
+            s
+        }
+        None => UserSettings {
+            autosave: true,
+            shortcut_prev: "Alt+ArrowLeft".into(),
+            shortcut_next: "Alt+ArrowRight".into(),
+            translate_server: None,
+        },
+    }
+}
+
+async fn settings_page(
+    State(state): State<SharedState>,
+    session: Session,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    let s = load_settings(&state.db, user.0).await;
+    let images_count: i64 = 0;
+    let tpl = crate::templates::SettingsTemplate {
+        settings: s,
+        saved: false,
+        images_count,
+    };
+    Html(tpl.render().unwrap()).into_response()
+}
+
+async fn save_settings(
+    State(state): State<SharedState>,
+    session: Session,
+    Form(form): Form<SettingsForm>,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    let autosave = form.autosave.as_deref() == Some("on") || form.autosave.as_deref() == Some("true");
+    let shortcuts = serde_json::json!({
+        "prev": sanitize_shortcut(form.shortcut_prev.as_deref().unwrap_or("Alt+ArrowLeft")),
+        "next": sanitize_shortcut(form.shortcut_next.as_deref().unwrap_or("Alt+ArrowRight")),
+    })
+    .to_string();
+    let server = form
+        .translate_server
+        .map(|s| s.trim().to_string())
+        .filter(|s| s.starts_with("https://"));
+    let res = sqlx::query(
+        "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server) VALUES (?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server",
+    )
+    .bind(user.0)
+    .bind(autosave as i64)
+    .bind(&shortcuts)
+    .bind(&server)
+    .execute(&state.db)
+    .await;
+    let s = load_settings(&state.db, user.0).await;
+    let tpl = crate::templates::SettingsTemplate {
+        settings: s,
+        saved: res.is_ok(),
+        images_count: 0,
+    };
+    Html(tpl.render().unwrap()).into_response()
+}
+
+/// Ne conserve que des combinaisons sûres : Alt/Ctrl/Shift/Meta + touche.
+fn sanitize_shortcut(s: &str) -> String {
+    let parts: Vec<&str> = s.split('+').map(|p| p.trim()).collect();
+    let mut mods = Vec::new();
+    let mut key = String::new();
+    for p in parts {
+        match p.to_ascii_lowercase().as_str() {
+            "alt" | "ctrl" | "control" | "shift" | "meta" => mods.push(p.to_ascii_uppercase()),
+            _ => {
+                if key.is_empty() && p.len() <= 20 && p.chars().all(|c| c.is_alphanumeric()) {
+                    key = p.to_string();
+                }
+            }
+        }
+    }
+    if key.is_empty() {
+        "Alt+ArrowLeft".into()
+    } else {
+        let mut out = mods.join("+");
+        if !out.is_empty() {
+            out.push('+');
+        }
+        out.push_str(&key);
+        out
+    }
+}
+
+// ---------- traduction (LibreTranslate) ----------
+
+#[derive(Deserialize)]
+struct TranslateForm {
+    text: String,
+}
+
+async fn translate_text(
+    State(state): State<SharedState>,
+    session: Session,
+    Form(form): Form<TranslateForm>,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if form.text.trim().is_empty() || form.text.len() > MAX_TEXT {
+        return (StatusCode::BAD_REQUEST, "texte invalide").into_response();
+    }
+    let server = sqlx::query_scalar::<_, Option<String>>(
+        "SELECT translate_server FROM user_settings WHERE user_id = ?",
+    )
+    .bind(user.0)
+    .fetch_optional(&state.db)
+    .await
+    .ok()
+    .flatten()
+    .flatten()
+    .unwrap_or_else(|| "https://translate.terraprint.co".into());
+    let body = serde_json::json!({
+        "q": form.text,
+        "source": "en",
+        "target": "fr",
+        "format": "text",
+    });
+    let res = tokio::task::spawn_blocking(move || -> Result<serde_json::Value, String> {
+        let r = ureq::post(&format!("{server}/translate"))
+            .timeout(std::time::Duration::from_secs(10))
+            .send_json(body)
+            .map_err(|e| e.to_string())?;
+        r.into_json::<serde_json::Value>().map_err(|e| e.to_string())
+    })
+    .await;
+    match res {
+        Ok(Ok(v)) if v.get("translatedText").is_some() => {
+            let translated = v
+                .get("translatedText")
+                .and_then(|t| t.as_str())
+                .unwrap_or_default()
+                .to_string();
+            if translated.is_empty() {
+                (StatusCode::BAD_GATEWAY, "réponse du serveur de traduction invalide").into_response()
+            } else {
+                ([(header::CONTENT_TYPE, "text/plain; charset=utf-8")], translated).into_response()
+            }
+        }
+        _ => (StatusCode::BAD_GATEWAY, "serveur de traduction injoignable").into_response(),
+    }
 }

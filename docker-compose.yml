@@ -20,5 +20,20 @@ services:
     cap_drop:
       - ALL
 
+# Traduction auto-hébergée (recommandé : le texte sélectionné ne quitte
+# pas votre machine). Décommentez ce service, puis dans Paramètres :
+# https://libretranslate:5000
+#   libretranslate:
+#     image: libretranslate/libretranslate:latest
+#     restart: unless-stopped
+#     command: --en --fr
+#     expose:
+#       - "5000"
+#     volumes:
+#       - lt_models:/home/libretranslate/.local
+#     security_opt:
+#       - no-new-privileges:true
+
 volumes:
   eulalie_data:
+#  lt_models:

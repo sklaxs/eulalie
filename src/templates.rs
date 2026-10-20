@@ -39,6 +39,16 @@ pub struct EditorTemplate {
     pub rendered_markdown: String,
     pub next_idx: Option<usize>,
     pub prev_idx: Option<usize>,
+    pub autosave: bool,
+    pub shortcut_prev: String,
+    pub shortcut_next: String,
+    pub images: Vec<ImageRow>,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct ImageRow {
+    pub id: i64,
+    pub filename: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -63,3 +73,21 @@ pub struct BookmarkMeta {
     pub label: String,
     pub page: i64,
 }
+
+#[derive(Template)]
+#[template(path = "settings.html")]
+pub struct SettingsTemplate {
+    pub settings: UserSettings,
+    pub saved: bool,
+    pub images_count: i64,
+}
+
+#[derive(serde::Serialize, Clone)]
+pub struct UserSettings {
+    pub autosave: bool,
+    pub shortcut_prev: String,
+    pub shortcut_next: String,
+    pub translate_server: Option<String>,
+}
+
+
