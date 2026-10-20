@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ current.title }} — Eulalie</title>
+<style>
+:root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.6 -apple-system,'Segoe UI',Roboto,Inter,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;height:100vh}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);gap:14px}
+.brand{font-weight:700;color:var(--accent);white-space:nowrap}
+.proj-title{font-weight:600}
+nav a{color:var(--muted);font-size:14px;margin-left:14px}
+nav a:hover{color:var(--accent2)}
+.layout{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;min-height:0}
+.pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border)}
+.pane:last-child{border-right:none}
+.pane-head{display:flex;justify-content:space-between;align-items:center;padding:8px 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px}
+.pane-head h2{margin:0;font-size:14px;color:var(--muted);font-weight:600}
+.pane-body{flex:1;overflow:auto;padding:18px 22px}
+#source{white-space:pre-wrap;color:var(--fg)}
+#source h4{margin:0 0 12px;font-size:18px;color:#fff}
+.chapter-title{font-size:19px;font-weight:700;margin-bottom:14px;color:#fff}
+.toolbar{display:flex;gap:6px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap}
+.toolbar button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:5px 11px;font-size:13px;cursor:pointer}
+.toolbar button:hover{border-color:var(--accent)}
+textarea#editor{flex:1;border:none;border-radius:0;background:var(--bg);color:var(--fg);font:14px/1.65 ui-monospace,'Cascadia Code',monospace;padding:18px 22px;resize:none}
+textarea#editor:focus{outline:none}
+#preview{font-size:15px;line-height:1.7}
+#preview h1,#preview h2,#preview h3{color:#fff;margin-top:1.2em}
+#preview table{border-collapse:collapse;margin:12px 0}
+#preview th,#preview td{border:1px solid var(--border);padding:6px 12px}
+#preview blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:4px 14px;color:var(--muted)}
+.navbtns{display:flex;gap:8px;align-items:center}
+.navbtns .btn-sm{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;text-decoration:none}
+.navbtns .btn-sm:hover{border-color:var(--accent)}
+.counter{color:var(--muted);font-size:13px}
+.zoom{display:flex;gap:4px;align-items:center}
+.zoom button{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:2px 9px;cursor:pointer;font-size:14px}
+.saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
+.saved.show{opacity:1}
+</style>
+</head>
+<body>
+<header class="top">
+<span class="brand">Eulalie ✦</span>
+<span class="proj-title">{{ project.title }}</span>
+<nav>
+<a href="/">← Projets</a>
+<a href="/projects/{{ project.id }}/export.md" download>Exporter .md</a>
+</nav>
+<form method="post" action="/projects/{{ project.id }}" style="display:flex;gap:8px"
+onsubmit="this.style.display='none';document.getElementById('renameRow').style.display='flex'">
+</form>
+</header>
+<div class="layout">
+<section class="pane">
+<div class="pane-head">
+<h2>{{ current.title }}</h2>
+<div class="navbtns">
+{% if let Some(p) = prev_idx %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ p }}">◀</a>{% endif %}
+<span class="counter">{{ current_idx + 1 }} / {{ chapters.len() }}</span>
+{% if let Some(n) = next_idx %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ n }}">▶</a>{% endif %}
+</div>
+</div>
+<div class="pane-body" id="source">
+<div class="chapter-title">{{ current.title }}</div>
+{% for line in current_lines %}{{ line }}<br>{% endfor %}
+</div>
+</section>
+<section class="pane">
+<div class="toolbar">
+<button onclick="wrap('**','**')" title="Gras"><b>B</b></button>
+<button onclick="wrap('*','*')" title="Italique"><i>I</i></button>
+<button onclick="insert('\n\n::: center\n\n:::\n')" title="Centrer">⇔</button>
+<button onclick="insert('\n| Colonne 1 | Colonne 2 |\n|---|---|\n|  |  |\n')" title="Tableau">▤</button>
+<button onclick="insert('![alt](chemin)')" title="Image">🖼</button>
+<button onclick="insert('[texte](https://)')" title="Lien">🔗</button>
+<span style="flex:1"></span>
+<button id="togglePreview" onclick="togglePreview()">👁 Aperçu</button>
+</div>
+<textarea id="editor" spellcheck="true">{{ current_markdown }}</textarea>
+<div id="preview" style="display:none" class="pane-body"></div>
+<div class="pane-head">
+<span id="saveStatus" class="saved">✓ enregistré</span>
+<span style="flex:1"></span>
+<button class="btn-sm" onclick="save(true)">💾 Sauvegarder</button>
+</div>
+</section>
+</div>
+<script>
+let zoom = 1;
+const editor = document.getElementById('editor');
+const preview = document.getElementById('preview');
+function wrap(b,a){const s=editor.selectionStart,e=editor.selectionEnd;
+editor.setRangeText(b+a,e,e,'end');
+editor.setRangeText(editor.value.slice(s, e), s, s+ (b+a).length, 'end');
+editor.setRangeText(b,s,s,'end');
+editor.setRangeText(a,s,s+ (b+a).length+0,'end');
+editor.focus();recompute();}
+function insert(t){const s=editor.selectionStart;editor.setRangeText(t,s,s,'end');editor.focus();}
+function recompute(){}
+let previewOn=false;
+function togglePreview(){previewOn=!previewOn;
+if(previewOn){editor.style.display='none';preview.style.display='block';
+fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/preview',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(editor.value)})
+.then(r=>r.text()).then(h=>preview.innerHTML=h);
+document.getElementById('togglePreview').textContent='✎ Rédaction';}
+else{editor.style.display='block';preview.style.display='none';
+document.getElementById('togglePreview').textContent='👁 Aperçu';}}
+let saveTimer=null;
+function save(show){clearTimeout(saveTimer);
+fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/save',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(editor.value)})
+.then(()=>{const s=document.getElementById('saveStatus');s.classList.add('show');setTimeout(()=>s.classList.remove('show'),1500);});}
+editor.addEventListener('input',()=>{clearTimeout(saveTimer);saveTimer=setTimeout(()=>save(),1200);});
+// Zoom Ctrl+molette sur chaque panneau
+document.querySelectorAll('.pane').forEach(pane=>{pane.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();
+const body=pane.querySelector('.pane-body,textarea');let z=parseFloat(body.dataset.zoom||'1');
+z=e.deltaY<0?Math.min(2,z+0.1):Math.max(0.5,z-0.1);body.dataset.zoom=z;
+body.style.fontSize=(15*z)+'px';}},{passive:false});});
+// Alt+flèches
+document.addEventListener('keydown',e=>{if(e.altKey&&e.key==='ArrowRight'){const n=document.querySelector('.navbtns a:last-child');if(n)n.click();}
+if(e.altKey&&e.key==='ArrowLeft'){const links=[...document.querySelectorAll('.navbtns a')];if(links.length)links[0].click();}});
+</script>
+</body>
+</html>

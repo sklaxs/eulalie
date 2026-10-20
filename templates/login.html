@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eulalie — connexion</title>
+<style>
+:root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 -apple-system,'Segoe UI',Roboto,Inter,sans-serif;background:radial-gradient(1200px 600px at 20% -10%,#1d2033,#12141d);color:var(--fg);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;width:min(400px,90vw);box-shadow:0 20px 60px rgba(0,0,0,.4)}
+h1{margin:0 0 6px;font-size:26px}
+p.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
+label{display:block;margin:14px 0 6px;font-size:14px;color:var(--muted)}
+input{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:11px 12px;font:inherit}
+input:focus{outline:2px solid var(--accent)}
+.btn{width:100%;margin-top:20px;background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.12)}
+.error{background:rgba(255,80,80,.12);border:1px solid rgba(255,80,80,.4);color:#ff9a9a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:14px}
+.alt{margin-top:16px;text-align:center;font-size:14px;color:var(--muted)}
+.alt a{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="card">
+<h1>Eulalie</h1>
+<p class="sub">Atelier de traduction — EPUB &amp; PDF vers Markdown</p>
+{% if let Some(e) = error %}<div class="error">{e}</div>{% endif %}
+{% if mode_register %}
+<form method="post" action="/register">
+<label>Nom d'utilisateur</label><input type="text" name="username" required maxlength="32" autocomplete="username">
+<label>Mot de passe (10 caractères min.)</label><input type="password" name="password" required minlength="10" autocomplete="new-password">
+<button class="btn" type="submit">Créer le compte</button>
+</form>
+<p class="alt">Déjà un compte ? <a href="/login">Se connecter</a></p>
+{% else %}
+<form method="post" action="/login">
+<label>Nom d'utilisateur</label><input type="text" name="username" required autocomplete="username">
+<label>Mot de passe</label><input type="password" name="password" required autocomplete="current-password">
+<button class="btn" type="submit">Se connecter</button>
+</form>
+<p class="alt">Pas encore de compte ? <a href="/register">S'enregistrer</a></p>
+{% endif %}
+</div>
+</body>
+</html>

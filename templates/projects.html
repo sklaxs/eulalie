@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eulalie — projets</title>
+<style>
+:root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.6 -apple-system,'Segoe UI',Roboto,Inter,sans-serif;background:var(--bg);color:var(--fg)}
+header.top{display:flex;justify-content:space-between;align-items:center;padding:14px 28px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.brand{font-weight:700;font-size:18px;color:var(--accent)}
+nav a{color:var(--muted);margin-left:18px;font-size:14px}
+nav a:hover{color:var(--accent2)}
+main{max-width:1080px;margin:0 auto;padding:28px}
+h1{font-size:24px;margin:0 0 20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:18px 20px;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card h3{margin:0 0 4px;font-size:17px}
+.card .meta{color:var(--muted);font-size:13px;margin-bottom:10px}
+.progress{height:6px;background:var(--bg3);border-radius:99px;overflow:hidden;margin:8px 0 4px}
+.progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:99px}
+.badge{display:inline-block;background:var(--bg3);border-radius:99px;padding:1px 10px;font-size:12px;color:var(--muted)}
+.badge.epub{color:#f6c177}.badge.pdf{color:#ff6b6b}
+.import{background:var(--bg2);border:1px dashed var(--border);border-radius:12px;padding:22px;margin-bottom:28px;display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap}
+.import label{font-size:13px;color:var(--muted);display:block;margin-bottom:6px}
+.import input[type=text]{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:9px 11px;font:inherit;width:260px}
+.import input[type=file]{color:var(--muted)}
+.btn{background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:15px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.12)}
+.empty{color:var(--muted);text-align:center;padding:40px}
+</style>
+</head>
+<body>
+<header class="top">
+<span class="brand">Eulalie ✦</span>
+<nav><a href="#" onclick="document.getElementById('logoutForm').submit()">Déconnexion</a>
+<form id="logoutForm" method="post" action="/logout" style="display:none"></form></nav>
+</header>
+<main>
+<div class="import">
+<form method="post" action="/projects" enctype="multipart/form-data" style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+<div><label>Titre du projet (optionnel)</label><input type="text" name="title" placeholder="Par défaut : nom du fichier"></div>
+<div><label>Document source</label><input type="file" name="file" accept=".epub,.pdf" required></div>
+<button class="btn" type="submit">Importer</button>
+</form>
+</div>
+<h1>Vos projets</h1>
+{% if projects.is_empty() %}
+<p class="empty">Aucun projet — importez un EPUB ou un PDF ci-dessus.</p>
+{% else %}
+<div class="grid">
+{% for p in projects %}
+<a class="card" href="/projects/{{ p.id }}/chapter/0" style="text-decoration:none;color:inherit">
+<h3>{{ p.title }}</h3>
+<div class="meta"><span class="badge {{ p.source_kind }}">{{ p.source_kind|upper }}</span> {{ p.source_title }} · {{ p.updated_at }}</div>
+<div class="progress"><div style="width: {% if p.chapter_count == 0 %}0{% else %}{{ p.translated_count * 100 / p.chapter_count }}{% endif %}"></div></div>
+<div class="meta">{{ p.translated_count }} / {{ p.chapter_count }} chapitres traduits</div>
+</a>
+{% endfor %}
+</div>
+{% endif %}
+</main>
+</body>
+</html>
