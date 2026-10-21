@@ -118,7 +118,36 @@ Mesures implémentées, point par point :
   nom de stockage aléatoire (pas d'écrasement ni de path traversal),
   limite de taille sur tous les champs texte (2 Mo).
 
-## Déploiement (PaaS type Arcane)
+## Déploiement (Arcane, PaaS auto-hébergé)
+
+### Option A — laisser Arcane construire depuis le dépôt Git
+Arcane clone le dépôt et construit l'image lui-même : créez une application,
+pointez-la sur `sklaxs/eulalie` (branche `main`). Arcane détecte le `Dockerfile`
+à la racine. Pensez à :
+- connecter l'application GitHub d'Arcane à votre dépôt privé (ses apps :
+  *Repository access* → `sklaxs/eulalie`) ;
+- déclarer le **port 8080** et monter un **volume sur `/data`** (sinon la base
+  SQLite disparaît à chaque redéploiement).
+
+### Option B — tirer l'image pré-construite (recommandé)
+Le workflow GitHub Actions publie `ghcr.io/sklaxs/eulalie:main` à chaque push.
+Dans Arcane, créez l'application avec l'image du registre, comme un conteneur
+existant — pas de build sur le serveur. Si le paquet est privé, configurez
+dans Arcane les identifiants du registre `ghcr.io` (votre utilisateur GitHub +
+un token `read:packages`), ou rendez le paquet public.
+
+Dans les deux cas, variables recommandées :
+- `EULALIE_PUBLIC_URL=https://votre-domaine` — cookies `Secure` ;
+- `EULALIE_DISABLE_REGISTRATION=1` — après création de votre compte ;
+- volume `/data` **obligatoire** (SQLite + uploads).
+
+LibreTranslate : image `libretranslate/libretranslate`, commande
+`--load-only en,fr --disable-web-ui`, ~2 Go de RAM, port 5000 — déployez-le
+comme deuxième application Arcane et pointez les Paramètres d'Eulalie dessus.
+
+### docker-compose direct (sans Arcane)
+Sur n'importe quel serveur avec Docker : `docker compose up -d --build`
+(voir plus haut) — c'est la méthode de référence pour la machine locale.
 
 L'image est construite et publiée automatiquement par GitHub Actions à chaque
 push sur `main` : `ghcr.io/sklaxs/eulalie:main` (dépôt privé — pensez à rendre
