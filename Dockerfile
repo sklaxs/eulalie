@@ -16,6 +16,7 @@ RUN mkdir -p src && echo '' > src/lib.rs \
 COPY src ./src
 COPY migrations ./migrations
 COPY templates ./templates
+COPY static ./static
 RUN cargo build --release --bin eulalie \
     # Garde : le vrai binaire fait > 1 Mo ; un binaire vide serait un bug de cache.
     && test $(stat -c%s target/release/eulalie) -gt 1000000
