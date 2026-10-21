@@ -109,9 +109,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="pane-head">
 <h2>{{ current.title }}</h2>
 <div class="navbtns">
-{% if let Some(p) = prev_idx %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ p }}">◀</a>{% endif %}
-<span class="counter">{{ current_idx + 1 }} / {{ chapters.len() }}</span>
-{% if let Some(n) = next_idx %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ n }}">▶</a>{% endif %}
+{% match prev_idx %}{% when Some with (p) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ p }}" title="Chapitre précédent"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M14 6l-6 6l6 6v-12" /> </svg></a>{% when None %}{% endmatch %}<span class="counter">{{ current_idx + 1 }} / {{ chapters.len() }}</span>{% match next_idx %}{% when Some with (n) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ n }}" title="Chapitre suivant"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 18l6 -6l-6 -6v12" /> </svg></a>{% when None %}{% endmatch %}
 </div>
 </div>
 <div class="pane-body" id="source">
@@ -331,8 +329,8 @@ document.addEventListener('keydown',e=>{
 // Ignorer les raccourcis pendant la saisie de texte dans un champ.
 const tag=(e.target.tagName||'').toLowerCase();
 if(tag==='input'||tag==='textarea'&&e.target.id!=='editor'){return;}
-if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n&&n.textContent.includes('▶'))n.click();}
-if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links.find(a=>a.textContent.includes('◀'));if(p)p.click();}
+if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n)n.click();}
+if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links[0];if(p)p.click();}
 if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();togglePreview();}
 });
 
