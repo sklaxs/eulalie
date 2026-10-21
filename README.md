@@ -118,6 +118,31 @@ Mesures implémentées, point par point :
   nom de stockage aléatoire (pas d'écrasement ni de path traversal),
   limite de taille sur tous les champs texte (2 Mo).
 
+## Déploiement (PaaS type Arcane)
+
+L'image est construite et publiée automatiquement par GitHub Actions à chaque
+push sur `main` : `ghcr.io/sklaxs/eulalie:main` (dépôt privé — pensez à rendre
+le paquet visible dans *Package settings* si votre PaaS doit le tirer).
+
+Sur votre PaaS, déployez ensuite comme n'importe quelle image de registre :
+
+- **Image** : `ghcr.io/sklaxs/eulalie:main`
+- **Port** : 8080
+- **Variables** : `EULALIE_PUBLIC_URL=https://votre-domaine` (active les cookies
+  `Secure`), éventuellement `EULALIE_DISABLE_REGISTRATION=1` après création du compte
+- **Stockage persistant** : montez un volume sur `/data` (base SQLite + uploads)
+  — indispensable, sans quoi tout est perdu au redéploiement
+- **Mémoire** : 512 Mo suffisent pour Eulalie ; si vous co-déployez LibreTranslate,
+  comptez 2 Go pour lui
+
+Si votre PaaS ne peut pas tirer une image privée, deux options :
+1. générer un *Personal Access Token* GitHub avec `read:packages` et l'utiliser
+   comme identifiants de registre dans Arcane ;
+2. ou rendre le paquet public (Package settings → Change visibility).
+
+Le service LibreTranslate peut rester sur votre machine (compose local) ou être
+déployé à côté — dans ce cas pointez Paramètres sur son URL.
+
 ## Développement
 
 ```bash
