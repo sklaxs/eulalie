@@ -94,6 +94,7 @@ async fn main() -> Result<()> {
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
+        .route("/favicon.svg", get(favicon_svg))
         // Limite de corps de requête alignée sur MAX_UPLOAD (Axum : 2 Mo par défaut,
         // trop bas pour un EPUB/PDF réel).
         .layer(axum::extract::DefaultBodyLimit::max(MAX_UPLOAD))
@@ -120,6 +121,16 @@ async fn require_user(
 
 async fn healthz() -> &'static str {
     "ok"
+}
+
+/// Favicon (SVG Tabler, licence MIT) — servi inline pour éviter toute
+/// dépendance externe ; pas de lecture disque (conteneur read-only).
+async fn favicon_svg() -> impl IntoResponse {
+    (
+        [(header::CONTENT_TYPE, "image/svg+xml"),
+         (header::CACHE_CONTROL, "public, max-age=86400"),],
+        include_str!("../static/favicon.svg"),
+    )
 }
 
 async fn login_page(session: Session) -> impl IntoResponse {

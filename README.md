@@ -149,6 +149,12 @@ cargo test  # tests unitaires (extraction, auth, assainissement Markdown)
 - Pas encore de rate limiting sur /login (à ajouter avec un reverse proxy,
   p. ex. `limit_req` nginx ou fail2ban).
 
+## Icônes
+
+Interface et favicon : icônes SVG [Tabler Icons](https://tabler.io/icons)
+(licence MIT — libres d'utilisation, sans attribution requise), intégrées inline
+(aucune requête vers un CDN externe).
+
 ## Licence
 
 MIT
