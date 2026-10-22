@@ -61,7 +61,7 @@ h1{font-size:20px}
 </div>
 <div class="card">
 <h2>Traduction automatique (anglais → français)</h2>
-<label for="translate_server">Serveur LibreTranslate (URL https://)</label>
+<label for="translate_server">Serveur LibreTranslate (URL http:// ou https://)</label>
 <input type="text" name="translate_server" id="translate_server" placeholder="http://libretranslate:5000"
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
 

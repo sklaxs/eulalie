@@ -1055,12 +1055,12 @@ async fn save_settings(
         "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("ALT+ArrowUp")),
     })
     .to_string();
-    // http:// autorisé uniquement pour les adresses internes Docker
-    // (libretranslate:5000) ; https:// requis pour tout serveur externe.
+    // Accepte tout serveur http:// ou https:// ; le slash final est
+    // retiré pour que "{server}/translate" reste une URL valide.
     let server = form
         .translate_server
-        .map(|s| s.trim().to_string())
-        .filter(|s| s.starts_with("https://") || s == "http://libretranslate:5000");
+        .map(|s| s.trim().trim_end_matches('/').to_string())
+        .filter(|s| s.starts_with("http://") || s.starts_with("https://"));
     let res = sqlx::query(
         "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server) VALUES (?, ?, ?, ?)
          ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server",
