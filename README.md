@@ -1,7 +1,6 @@
 # Eulalie
 
-**Eulalie** est la déclinaison web d'[Ophélie](https://github.com/sklaxs/ophelie) :
-un atelier de traduction EPUB/PDF vers Markdown, entièrement en Rust.
+**Eulalie** est un atelier de traduction EPUB/PDF vers Markdown, entièrement en Rust.
 
 ## Architecture
 
