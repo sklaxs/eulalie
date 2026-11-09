@@ -46,6 +46,8 @@ pub struct EditorTemplate {
     pub shortcut_preview: String,
     pub images: Vec<ImageRow>,
     pub langs: Vec<LangOption>,
+    pub glossary: Vec<GlossaryRow>,
+    pub notes: String,
 }
 
 #[derive(Clone)]
@@ -59,6 +61,13 @@ pub struct LangOption {
 pub struct ImageRow {
     pub id: i64,
     pub filename: String,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct GlossaryRow {
+    pub id: i64,
+    pub term: String,
+    pub translation: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -101,6 +110,7 @@ pub struct UserSettings {
     pub shortcut_next: String,
     pub shortcut_preview: String,
     pub translate_server: Option<String>,
+    pub translate_timeout: i64,
 }
 
 

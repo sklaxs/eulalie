@@ -64,6 +64,8 @@ h1{font-size:20px}
 <label for="translate_server">Serveur LibreTranslate (URL http:// ou https://)</label>
 <input type="text" name="translate_server" id="translate_server" placeholder="http://libretranslate:5000"
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
+<label for="translate_timeout" style="margin-top:12px">Temps d'attente maximal des traductions (secondes, 1 à 120)</label>
+<input type="number" name="translate_timeout" id="translate_timeout" min="1" max="120" step="1" value="{{ settings.translate_timeout }}">
 
 </div>
 <button class="btn" type="submit">Enregistrer</button>

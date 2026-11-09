@@ -44,9 +44,11 @@ textarea#editor:focus{outline:none}
 .counter{color:var(--muted);font-size:13px}
 .saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
 .saved.show{opacity:1}
-/* bouton Traduire flottant sur la sélection */
-#translateBtn{position:fixed;display:none;background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 20px rgba(0,0,0,.4);z-index:50}
+/* barre Traduire : pleine largeur du panneau source (≈ 0,4 cm de haut) */
+#translateBtn{display:none;width:100%;min-height:0.4cm;border:none;border-top:1px solid var(--border);background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:4px 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #translateBtn:hover{filter:brightness(1.15)}
+#translateBtn:disabled{opacity:.6;cursor:wait}
+#translateBtn .sel{color:rgba(255,255,255,.75);font-weight:400;font-size:12px}
 /* modal images */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
@@ -65,6 +67,21 @@ textarea#editor:focus{outline:none}
 .upload-row{display:flex;gap:10px;align-items:center}
 .upload-row input[type=file]{color:var(--muted);font-size:13px}
 .empty-note{color:var(--muted);font-size:13px;margin-top:10px}
+/* glossaire & notes */
+.gloss-form{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.gloss-form input{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px}
+.gloss-form input:focus{outline:none;border-color:var(--accent)}
+.gloss-list{display:flex;flex-direction:column;gap:6px}
+.gloss-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg3);font-size:14px;cursor:pointer}
+.gloss-row:hover{border-color:var(--accent)}
+.gloss-row .term{font-weight:600;flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gloss-row .arrow{color:var(--muted)}
+.gloss-row .trans{flex:1;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gloss-row .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
+.gloss-row .del:hover{opacity:1}
+#notesArea{width:100%;min-height:300px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:12px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
+#notesArea:focus{outline:none;border-color:var(--accent)}
+.notes-status{color:var(--muted);font-size:12px;margin-top:6px;min-height:16px}
 
 /* ── Responsive ── */
 @media (max-width: 900px){
@@ -109,6 +126,8 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="pane-head">
 <h2>{{ current.title }}</h2>
 <div class="navbtns">
+<button class="btn-sm" id="glossBtn" title="Glossaire du livre (termes / phrases de référence)">📔</button>
+<button class="btn-sm" id="notesBtn" title="Notes de traduction">📝</button>
 {% match prev_idx %}{% when Some with (p) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ p }}" title="Chapitre précédent"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M14 6l-6 6l6 6v-12" /> </svg></a>{% when None %}{% endmatch %}<span class="counter">{{ current_idx + 1 }} / {{ chapters.len() }}</span>{% match next_idx %}{% when Some with (n) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ n }}" title="Chapitre suivant"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 18l6 -6l-6 -6v12" /> </svg></a>{% when None %}{% endmatch %}
 </div>
 </div>
@@ -116,6 +135,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="chapter-title">{{ current.title }}</div>
 {% for line in current_lines %}{{ line }}<br>{% endfor %}
 </div>
+<button id="translateBtn">🌍 Traduire la sélection</button>
 </section>
 <section class="pane">
 <div class="toolbar">
@@ -135,8 +155,39 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="preview" style="display:none" class="pane-body"></div>
 </section>
 </div>
-<button id="translateBtn">🌍 Traduire</button>
 <div id="toast" class="toast"></div>
+<div class="modal-bg" id="glossModal">
+<div class="modal">
+<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div>
+<div class="modal-body">
+<p class="hint" style="margin:0 0 10px">Termes de référence du livre. Ils sont appliqués automatiquement aux traductions ; cliquez une traduction pour l'insérer au curseur.</p>
+<form class="gloss-form" id="glossForm">
+<input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
+<input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
+<button class="btn-sm" type="submit" id="glossAddBtn">Ajouter</button>
+</form>
+{% if glossary.is_empty() %}
+<p class="empty-note" id="glossEmptyNote">Aucun terme pour l'instant — ajoutez vos références de traduction ci-dessus.</p>
+{% endif %}
+<div class="gloss-list" id="glossList">
+{% for g in glossary %}
+<div class="gloss-row" data-id="{{ g.id }}" data-trans="{{ g.translation }}" title="Cliquer pour insérer la traduction au curseur">
+<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+</div>
+<div class="modal-bg" id="notesModal">
+<div class="modal">
+<div class="modal-head"><h3>📝 Notes — {{ project.title }}</h3><button class="btn-sm" onclick="closeNotesModal()">Fermer</button></div>
+<div class="modal-body">
+<textarea id="notesArea" placeholder="Notes de traduction, remarques, choix éditoriaux…">{{ notes }}</textarea>
+<div class="notes-status" id="notesStatus"></div>
+</div>
+</div>
+</div>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -279,37 +330,88 @@ nameEl.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();nameEl.blur();}
 if(ev.key==='Escape'){nameEl.textContent=old;nameEl.contentEditable='false';}};
 }
 
-// Traduction à la sélection (panneau gauche)
+// Traduction : barre pleine largeur en bas du panneau source.
 const translateBtn=document.getElementById('translateBtn');
 let selText='';
+function resetTranslateBtn(){translateBtn.innerHTML='🌍 Traduire la sélection';translateBtn.disabled=false;translateBtn.style.display='none';}
 document.addEventListener('selectionchange',()=>{
+if(translateBtn.disabled)return;
 const sel=window.getSelection();
 const t=sel?sel.toString().trim():'';
 if(t.length>1&&t.length<5000&&sourcePane.contains(sel.anchorNode)){
 selText=t;
-const r=sel.getRangeAt(0).getBoundingClientRect();
+const short=t.length>60?t.slice(0,57)+'…':t;
+translateBtn.innerHTML='🌍 Traduire <span class="sel">« '+short.replace(/</g,'&lt;')+' »</span>';
 translateBtn.style.display='block';
-// À droite de la sélection ; rabattu sous la sélection si pas assez de place.
-const bw=translateBtn.offsetWidth||120;
-if(r.right+8+bw<window.innerWidth){
-translateBtn.style.left=(r.right+window.scrollX+8)+'px';
-translateBtn.style.top=(r.top+window.scrollY-4)+'px';
-}else{
-translateBtn.style.left=Math.min(r.left+window.scrollX,window.innerWidth-bw-8)+'px';
-translateBtn.style.top=(r.bottom+window.scrollY+8)+'px';
-}
-}else{translateBtn.style.display='none';selText='';}
+}else{resetTranslateBtn();selText='';}
 });
 translateBtn.onclick=()=>{
 if(!selText)return;
-translateBtn.textContent='… traduction';translateBtn.disabled=true;
+translateBtn.textContent='… traduction en cours';translateBtn.disabled=true;
 fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)+'&project_id={{ project.id }}'})
 .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
 .then(txt=>{insert(txt+'\n');resetTranslateBtn();})
 .catch(e=>{resetTranslateBtn();
 showToast('Échec de la traduction — '+e.message+'. Vérifiez le serveur LibreTranslate dans Paramètres (ex. http://libretranslate:5000) et que le conteneur est démarré.');});
 };
-function resetTranslateBtn(){translateBtn.textContent='🌍 Traduire';translateBtn.disabled=false;translateBtn.style.display='none';}
+
+// Glossaire du livre
+const glossBtn=document.getElementById('glossBtn');
+glossBtn.onclick=()=>document.getElementById('glossModal').classList.add('show');
+function closeGlossModal(){document.getElementById('glossModal').classList.remove('show');}
+document.getElementById('glossModal').addEventListener('click',e=>{if(e.target.id==='glossModal')closeGlossModal();});
+document.getElementById('glossForm').addEventListener('submit',e=>{
+e.preventDefault();
+const term=document.getElementById('glossTerm').value;
+const trans=document.getElementById('glossTrans').value;
+const btn=document.getElementById('glossAddBtn');
+btn.disabled=true;
+fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)})
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(g=>{
+const list=document.getElementById('glossList');
+const note=document.getElementById('glossEmptyNote');if(note)note.remove();
+const row=document.createElement('div');
+row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
+row.title="Cliquer pour insérer la traduction au curseur";
+row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.querySelector('.term').textContent=g.term;
+row.querySelector('.trans').textContent=g.translation;
+row.onclick=()=>insert(g.translation);
+row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
+list.prepend(row);
+e.target.reset();btn.disabled=false;showToast('Terme ajouté au glossaire.',true,1500);
+})
+.catch(()=>{btn.disabled=false;showToast("Échec de l'ajout au glossaire.");});
+});
+document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
+row.onclick=()=>insert(row.dataset.trans);
+row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(parseInt(row.dataset.id),row.querySelector('.del'));};
+});
+function deleteGloss(id,el){
+if(!confirm('Supprimer ce terme du glossaire ?'))return;
+fetch('/glossary/'+id+'/delete',{method:'POST'})
+.then(r=>{if(!r.ok)throw 0;el.closest('.gloss-row').remove();showToast('Terme supprimé.',true,1500);})
+.catch(()=>showToast('Suppression impossible.'));
+}
+
+// Notes de traduction (sauvegarde automatique 1 s après la saisie)
+const notesBtn=document.getElementById('notesBtn');
+notesBtn.onclick=()=>document.getElementById('notesModal').classList.add('show');
+function closeNotesModal(){document.getElementById('notesModal').classList.remove('show');}
+document.getElementById('notesModal').addEventListener('click',e=>{if(e.target.id==='notesModal')closeNotesModal();});
+const notesArea=document.getElementById('notesArea');
+const notesStatus=document.getElementById('notesStatus');
+let notesTimer=null;
+notesArea.addEventListener('input',()=>{
+notesStatus.textContent='…';
+clearTimeout(notesTimer);
+notesTimer=setTimeout(()=>{
+fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'notes='+encodeURIComponent(notesArea.value)})
+.then(r=>{if(!r.ok)throw 0;notesStatus.textContent='✓ Enregistré à '+new Date().toLocaleTimeString();})
+.catch(()=>notesStatus.textContent="Échec de l'enregistrement.");
+},1000);
+});
 
 // Raccourcis personnalisés
 function matchShortcut(e,combo){

@@ -27,6 +27,15 @@ les fichiers importés sont stockés sur un volume Docker.
   (barre d'outils gras/italique/titres/tableau/image/lien, autosauvegarde 1,2 s,
   aperçu, zoom Ctrl+molette par panneau, navigation Alt+flèches).
 - Export Markdown d'un projet complet.
+- Glossaire par livre (📔 dans l'éditeur) : termes/phrases de référence
+  (ex. Accountability → Responsable), appliqués automatiquement aux traductions
+  (insensible à la casse, majuscule conservée) ; clic pour insérer au curseur.
+- Notes de traduction (📝 dans l'éditeur) : prise de notes par livre,
+  sauvegarde automatique.
+- Temps d'attente des traductions : paramétrable dans Paramètres (1 à 120 s,
+  10 s par défaut).
+- Bouton Traduire : barre pleine largeur en bas du panneau source, affichée
+  quand une sélection y est faite.
 - Points de repère (bookmarks) par projet.
 
 ## Démarrage
