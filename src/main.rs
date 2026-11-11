@@ -8,6 +8,7 @@ use crate::bookextract::SourceKind;
 use templates::*;
 use anyhow::{Context, Result};
 use askama::Template;
+use axum::extract::connect_info::ConnectInfo;
 use axum::extract::{Multipart, Path, State};
 use axum::http::{header, StatusCode};
 use axum::response::{Html, IntoResponse, Redirect};
@@ -17,7 +18,9 @@ use serde::Deserialize;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::SqlitePool;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::{Arc, Mutex, OnceLock};
 use tower_sessions::Session;
 
 const MAX_UPLOAD: usize = 64 * 1024 * 1024; // 64 Mo
@@ -109,7 +112,11 @@ async fn main() -> Result<()> {
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
     tracing::info!("Eulalie écoute sur http://0.0.0.0:8080");
-    axum::serve(listener, app).await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
     Ok(())
 }
 
@@ -251,9 +258,14 @@ async fn register(
 
 async fn login(
     State(state): State<SharedState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     session: Session,
     Form(form): Form<Credentials>,
 ) -> impl IntoResponse {
+    // Anti brute-force : 10 échecs par IP puis verrouillage de 15 minutes.
+    if login_blocked(&addr.ip().to_string()) {
+        return (StatusCode::TOO_MANY_REQUESTS, "Trop de tentatives — réessayez plus tard.").into_response();
+    }
     let username = form.username.trim().to_string();
     let row: Option<(i64, String)> = sqlx::query_as(
         "SELECT id, password_hash FROM users WHERE username = ?",
@@ -262,15 +274,23 @@ async fn login(
     .fetch_optional(&state.db)
     .await
     .unwrap_or(None);
+    // Vérification factice pour un utilisateur inconnu : égalise le temps de
+    // réponse (Argon2) et ferme le canal d'énumération par timing.
+    const DUMMY_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$ejQxRnJZMEF1M3lNaGl4cg$5k3jF2Ylb1CqJQhZQoQFXFXFXFXFXFXFXFXFX";
     let ok = row
         .as_ref()
         .map(|(_, h)| auth::verify_password(&form.password, h))
-        .unwrap_or(false);
+        .unwrap_or_else(|| {
+            let _ = auth::verify_password(&form.password, DUMMY_HASH);
+            false
+        });
     if ok {
+        login_reset(&addr.ip().to_string());
         let (id, _) = row.unwrap();
         session.insert("user", (id, username)).await.unwrap();
         Redirect::to("/").into_response()
     } else {
+        login_fail(&addr.ip().to_string());
         // Message générique : ne pas révéler si le compte existe (énumération).
         Html(
             LoginTemplate {
@@ -283,6 +303,38 @@ async fn login(
         )
         .into_response()
     }
+}
+
+// ---------- anti brute-force /login ----------
+
+const LOGIN_MAX_FAILS: u32 = 10;
+const LOGIN_LOCKOUT: std::time::Duration = std::time::Duration::from_secs(15 * 60);
+
+/// Échecs de connexion par IP : (nombre d'échecs, date du dernier échec).
+fn login_fails() -> &'static Mutex<HashMap<String, (u32, std::time::Instant)>> {
+    static FAILS: OnceLock<Mutex<HashMap<String, (u32, std::time::Instant)>>> = OnceLock::new();
+    FAILS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn login_blocked(ip: &str) -> bool {
+    let map = login_fails().lock().unwrap();
+    match map.get(ip) {
+        Some(&(fails, last)) => fails >= LOGIN_MAX_FAILS && last.elapsed() < LOGIN_LOCKOUT,
+        _ => false,
+    }
+}
+
+fn login_fail(ip: &str) {
+    let mut map = login_fails().lock().unwrap();
+    let e = map.entry(ip.to_string()).or_insert((0, std::time::Instant::now()));
+    e.0 += 1;
+    e.1 = std::time::Instant::now();
+    // Nettoyage des entrées expirées pour limiter la mémoire.
+    map.retain(|_, (fails, last)| *fails < LOGIN_MAX_FAILS || last.elapsed() < LOGIN_LOCKOUT);
+}
+
+fn login_reset(ip: &str) {
+    login_fails().lock().unwrap().remove(ip);
 }
 
 async fn logout(session: Session) -> Redirect {
@@ -1521,6 +1573,33 @@ fn sanitize_shortcut(s: &str) -> String {
 
 // ---------- traduction (LibreTranslate) ----------
 
+/// Garde SSRF : le serveur de traduction est une URL fournie par l'utilisateur.
+/// Les plages/métadonnées cloud (169.254.0.0/16, metadata.google.internal…)
+/// sont refusées ; les réseaux privés restent autorisés par conception
+/// (outil auto-hébergé, LibreTranslate souvent sur le LAN).
+fn translation_server_allowed(url: &str) -> bool {
+    let host = url
+        .trim_start_matches("https://")
+        .trim_start_matches("http://")
+        .split(['/', ':'])
+        .next()
+        .unwrap_or("")
+        .to_lowercase();
+    if host == "metadata" || host == "metadata.google.internal" {
+        return false;
+    }
+    if let Ok(ip) = host.parse::<std::net::IpAddr>() {
+        let link_local = match ip {
+            std::net::IpAddr::V4(v4) => v4.is_link_local() || v4.is_unspecified(),
+            std::net::IpAddr::V6(v6) => v6.is_unspecified() || (v6.segments()[0] & 0xffc0) == 0xfe80,
+        };
+        if link_local {
+            return false;
+        }
+    }
+    true
+}
+
 #[derive(Deserialize)]
 struct TranslateForm {
     text: String,
@@ -1549,6 +1628,9 @@ async fn translate_text(
     .map(|(s, t)| (s, t.clamp(1, 120)))
     .unwrap_or_else(|| (Some("http://libretranslate:5000".into()), 10));
     let server = server.unwrap_or_else(|| "http://libretranslate:5000".into());
+    if !translation_server_allowed(&server) {
+        return (StatusCode::FORBIDDEN, "serveur de traduction non autorisé").into_response();
+    }
     // Langues du projet si précisé (et appartenant à l'utilisateur), sinon en→fr.
     let (mut source, mut target) = ("en".to_string(), "fr".to_string());
     if let Some(pid) = form.project_id {

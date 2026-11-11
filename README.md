@@ -118,8 +118,14 @@ Mesures implémentées, point par point :
 - Journalisation structurée (`tracing`) des erreurs serveur et du démarrage.
 
 ### A10 SSRF
-- Aucune requête sortante initiée par le serveur (pas de fetch d'URL fournie
-  par l'utilisateur, pas de preview d'URL distante).
+- Aucun fetch d'URL arbitraire fournie par l'utilisateur (pas de preview d'URL distante).
+- Exception assumée : le serveur LibreTranslate est une URL **par utilisateur**
+  (Paramètres) — seule requête sortante du serveur, vers `/translate`.
+  Garde-fous : schémas `http://`/`https://` uniquement, métadonnées cloud
+  refusées (169.254.0.0/16, `metadata.google.internal`…) ; les réseaux privés
+  restent autorisés par conception (outil auto-hébergé, LibreTranslate
+  souvent sur le LAN). Sur une instance multi-utilisateurs ouverte, passez
+  par un reverse proxy pour restreindre davantage.
 
 ### Uploads (A04/A08)
 - Taille limitée (64 Mo), extension **et** magic bytes contrôlés,
@@ -208,8 +214,9 @@ cargo test  # tests unitaires (extraction, auth, assainissement Markdown)
 ## Limites
 
 - PDF : extraction texte uniquement (pas de rendu page).
-- Pas encore de rate limiting sur /login (à ajouter avec un reverse proxy,
-  p. ex. `limit_req` nginx ou fail2ban).
+- Rate limiting applicatif sur /login : 10 échecs par IP puis verrouillage
+  de 15 minutes (en mémoire, par instance) ; un reverse proxy (`limit_req`
+  nginx, fail2ban) reste recommandé en complément.
 
 ## Icônes
 
