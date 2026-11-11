@@ -41,11 +41,20 @@ pub struct EditorTemplate {
     pub next_idx: Option<usize>,
     pub prev_idx: Option<usize>,
     pub autosave: bool,
+    pub translate_server: Option<String>,
+    pub translate_timeout: i64,
     pub shortcut_prev: String,
     pub shortcut_next: String,
     pub shortcut_preview: String,
     pub images: Vec<ImageRow>,
     pub langs: Vec<LangOption>,
+    pub glossary: Vec<GlossaryRow>,
+    pub notes: String,
+    pub notes_close_outside: bool,
+    pub shortcut_glossary: String,
+    pub shortcut_notes: String,
+    pub shortcut_translate: String,
+    pub notes_side: String,
 }
 
 #[derive(Clone)]
@@ -59,6 +68,14 @@ pub struct LangOption {
 pub struct ImageRow {
     pub id: i64,
     pub filename: String,
+}
+
+#[derive(sqlx::FromRow)]
+pub struct GlossaryRow {
+    pub id: i64,
+    pub term: String,
+    pub translation: String,
+    pub mistranslation: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -100,7 +117,13 @@ pub struct UserSettings {
     pub shortcut_prev: String,
     pub shortcut_next: String,
     pub shortcut_preview: String,
+    pub shortcut_glossary: String,
+    pub shortcut_notes: String,
+    pub shortcut_translate: String,
     pub translate_server: Option<String>,
+    pub translate_timeout: i64,
+    pub notes_side: String,
+    pub notes_close_outside: bool,
 }
 
 

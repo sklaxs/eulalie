@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg?v=eulalie2">
 <title>Paramètres — Eulalie</title>
 <style>
 :root{--bg:#12141d;--bg2:#1a1d29;--bg3:#232738;--fg:#e8eaf2;--muted:#9aa0b5;--accent:#8b7cf6;--accent2:#6ee7d7;--border:#2c3147;--ok:#3dd68c}
@@ -14,10 +14,16 @@ header.top{display:flex;justify-content:space-between;align-items:center;padding
 nav a{color:var(--muted);margin-left:18px;font-size:14px}
 main{max-width:720px;margin:0 auto;padding:28px}
 h1{font-size:24px;margin:0 0 24px}
-.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:22px 26px;margin-bottom:18px}
-h2{font-size:17px;margin:0 0 14px;color:var(--accent2)}
+/* accordéon : chaque thématique est une section dépliable */
+details.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+details.card summary{list-style:none;cursor:pointer;padding:16px 22px;font-size:17px;font-weight:600;color:var(--accent2);display:flex;justify-content:space-between;align-items:center;user-select:none}
+details.card summary::-webkit-details-marker{display:none}
+details.card summary::after{content:'▾';color:var(--muted);font-size:14px;transition:transform .2s}
+details.card[open] summary::after{transform:rotate(180deg)}
+details.card summary:hover{color:var(--accent)}
+details.card .card-body{padding:4px 22px 20px}
 label{display:block;margin:12px 0 4px;font-size:14px;color:var(--muted)}
-input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:10px 12px;font:inherit}
+input[type=text],input[type=number],select{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:10px 12px;font:inherit}
 .switch{display:flex;align-items:center;gap:12px;margin:8px 0}
 .switch input{transform:scale(1.3);accent-color:var(--accent)}
 .hint{font-size:13px;color:var(--muted);margin-top:4px}
@@ -28,7 +34,8 @@ input[type=text]{width:100%;background:var(--bg3);border:1px solid var(--border)
 /* ── Responsive ── */
 @media (max-width: 640px){
 main{padding:16px}
-.card{padding:16px 18px}
+details.card summary{padding:14px 16px}
+details.card .card-body{padding:4px 16px 16px}
 h1{font-size:20px}
 }
 </style>
@@ -42,15 +49,18 @@ h1{font-size:20px}
 <h1>Paramètres</h1>
 {% if saved %}<div class="saved">✓ Paramètres enregistrés</div>{% endif %}
 <form method="post" action="/settings">
-<div class="card">
-<h2>Sauvegarde</h2>
+<details class="card" open>
+<summary>Sauvegarde</summary>
+<div class="card-body">
 <div class="switch">
 <input type="checkbox" name="autosave" id="autosave" {% if settings.autosave %}checked{% endif %}>
 <label for="autosave" style="margin:0">Sauvegarde automatique des chapitres</label>
 </div>
 </div>
-<div class="card">
-<h2>Raccourcis clavier</h2>
+</details>
+<details class="card">
+<summary>Raccourcis clavier</summary>
+<div class="card-body">
 <p class="hint">Format : modificateurs + touche, ex. <code>Alt+ArrowLeft</code>, <code>Ctrl+Shift+P</code>.</p>
 <label for="shortcut_prev">Chapitre / page précédente</label>
 <input type="text" name="shortcut_prev" id="shortcut_prev" value="{{ settings.shortcut_prev }}">
@@ -58,14 +68,38 @@ h1{font-size:20px}
 <input type="text" name="shortcut_next" id="shortcut_next" value="{{ settings.shortcut_next }}">
 <label for="shortcut_preview">Afficher / masquer l'aperçu</label>
 <input type="text" name="shortcut_preview" id="shortcut_preview" value="{{ settings.shortcut_preview }}">
+<label for="shortcut_glossary">Ouvrir / fermer le volet du glossaire</label>
+<input type="text" name="shortcut_glossary" id="shortcut_glossary" value="{{ settings.shortcut_glossary }}">
+<label for="shortcut_notes">Ouvrir / fermer le volet des notes</label>
+<input type="text" name="shortcut_notes" id="shortcut_notes" value="{{ settings.shortcut_notes }}">
+<label for="shortcut_translate">Traduire la sélection du panneau source</label>
+<input type="text" name="shortcut_translate" id="shortcut_translate" value="{{ settings.shortcut_translate }}">
 </div>
-<div class="card">
-<h2>Traduction automatique (anglais → français)</h2>
+</details>
+<details class="card">
+<summary>Traduction</summary>
+<div class="card-body">
 <label for="translate_server">Serveur LibreTranslate (URL http:// ou https://)</label>
 <input type="text" name="translate_server" id="translate_server" placeholder="http://libretranslate:5000"
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
-
+<label for="translate_timeout">Temps d'attente maximal des traductions (secondes, 1 à 120)</label>
+<input type="number" name="translate_timeout" id="translate_timeout" min="1" max="120" step="1" value="{{ settings.translate_timeout }}">
 </div>
+</details>
+<details class="card">
+<summary>Volets</summary>
+<div class="card-body">
+<label for="notes_side">Côté d'affichage des volets (notes, glossaire)</label>
+<select name="notes_side" id="notes_side">
+<option value="right" {% if settings.notes_side == "right" %}selected{% endif %}>Droite</option>
+<option value="left" {% if settings.notes_side == "left" %}selected{% endif %}>Gauche</option>
+</select>
+<div class="switch" style="margin-top:12px">
+<input type="checkbox" name="notes_close_outside" id="notes_close_outside" {% if settings.notes_close_outside %}checked{% endif %}>
+<label for="notes_close_outside" style="margin:0">Fermer les volets quand on clique à l'extérieur</label>
+</div>
+</div>
+</details>
 <button class="btn" type="submit">Enregistrer</button>
 </form>
 </main>

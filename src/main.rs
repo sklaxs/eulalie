@@ -91,6 +91,12 @@ async fn main() -> Result<()> {
         .route("/images/:image_id/rename", post(rename_image))
         .route("/images/:image_id/delete", post(delete_image))
         .route("/projects/:id/langs", post(set_project_langs))
+        .route("/projects/:id/glossary", post(add_glossary_term))
+        .route("/glossary/:id/delete", post(delete_glossary_term))
+        .route("/projects/:id/glossary.csv", get(export_glossary_csv))
+        .route("/projects/:id/glossary.json", get(glossary_json))
+        .route("/projects/:id/glossary/import", post(import_glossary))
+        .route("/projects/:id/notes", post(save_notes))
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
@@ -128,7 +134,7 @@ async fn healthz() -> &'static str {
 async fn favicon_svg() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "image/svg+xml"),
-         (header::CACHE_CONTROL, "public, max-age=86400"),],
+         (header::CACHE_CONTROL, "public, max-age=3600"),],
         include_str!("../static/favicon.svg"),
     )
 }
@@ -560,6 +566,18 @@ async fn editor_page_inner(
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
+    let glossary: Vec<GlossaryRow> = sqlx::query_as(
+        "SELECT id, term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
+    )
+    .bind(project_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    let notes: String = sqlx::query_scalar("SELECT notes FROM projects WHERE id = ?")
+        .bind(project_id)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or_default();
     let all_langs = ["en", "fr", "de", "es", "it", "pt", "nl", "ru", "zh", "ja", "ar"];
     let langs: Vec<LangOption> = all_langs
         .iter()
@@ -582,11 +600,20 @@ async fn editor_page_inner(
             next_idx,
             prev_idx,
             autosave: settings.autosave,
+            translate_server: settings.translate_server,
+            translate_timeout: settings.translate_timeout,
             shortcut_prev: settings.shortcut_prev,
             shortcut_next: settings.shortcut_next,
             shortcut_preview: settings.shortcut_preview,
+            shortcut_glossary: settings.shortcut_glossary,
+            shortcut_notes: settings.shortcut_notes,
+            shortcut_translate: settings.shortcut_translate,
+            notes_side: settings.notes_side,
+            notes_close_outside: settings.notes_close_outside,
             images,
             langs,
+            glossary,
+            notes,
         }
         .render()
         .unwrap(),
@@ -904,6 +931,343 @@ async fn set_project_langs(
     Redirect::to(&format!("/projects/{project_id}/chapter/0")).into_response()
 }
 
+// ---------- glossaire par projet ----------
+
+#[derive(Deserialize)]
+struct GlossaryForm {
+    term: String,
+    translation: String,
+    mistranslation: Option<String>,
+}
+
+const MAX_TERM: usize = 200;
+const MAX_TRANSLATION: usize = 2000;
+
+async fn add_glossary_term(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    Form(form): Form<GlossaryForm>,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let term = form.term.trim().to_string();
+    let translation = form.translation.trim().to_string();
+    // Mistraduction : la traduction erronée que LibreTranslate produit
+    // habituellement pour ce terme — utile pour retrouver l'entrée sans
+    // repartir du mot dans la langue d'origine.
+    let mistranslation = form
+        .mistranslation
+        .as_deref()
+        .map(|m| m.trim().to_string())
+        .filter(|m| !m.is_empty() && m.len() <= MAX_TRANSLATION);
+    if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
+        return (StatusCode::BAD_REQUEST, "terme ou traduction invalide").into_response();
+    }
+    // Upsert insensible à la casse (COLLATE NOCASE) : « Accountability » et
+    // « accountability » désignent le même terme — on met à jour la ligne
+    // existante plutôt que d'en créer une seconde.
+    let existing: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM glossary WHERE project_id = ? AND term = ? COLLATE NOCASE",
+    )
+    .bind(project_id)
+    .bind(&term)
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(None);
+    let res = if let Some(id) = existing {
+        sqlx::query("UPDATE glossary SET translation = ?, mistranslation = ? WHERE id = ?")
+            .bind(&translation)
+            .bind(&mistranslation)
+            .bind(id)
+            .execute(&state.db)
+            .await
+            .map(|_| id)
+    } else {
+        sqlx::query("INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)")
+            .bind(project_id)
+            .bind(&term)
+            .bind(&translation)
+            .bind(&mistranslation)
+            .execute(&state.db)
+            .await
+            .map(|r| r.last_insert_rowid() as i64)
+    };
+    match res {
+        Ok(id) => {
+            axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "mistranslation": mistranslation})).into_response()
+        }
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "insertion impossible").into_response(),
+    }
+}
+
+async fn delete_glossary_term(
+    State(state): State<SharedState>,
+    Path(id): Path<i64>,
+    session: Session,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    // Le glossaire appartient à un projet : la propriété est revalidée.
+    let res = sqlx::query(
+        "DELETE FROM glossary WHERE id = ? AND project_id IN (SELECT id FROM projects WHERE id = glossary.project_id AND user_id = ?)",
+    )
+    .bind(id)
+    .bind(user.0)
+    .execute(&state.db)
+    .await;
+    match res {
+        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "suppression impossible").into_response(),
+    }
+}
+
+// ---------- notes de traduction par projet (prise de notes libre) ----------
+
+#[derive(Deserialize)]
+struct NotesForm {
+    notes: String,
+}
+
+async fn save_notes(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    Form(form): Form<NotesForm>,
+) -> impl IntoResponse {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    if form.notes.len() > MAX_TEXT {
+        return (StatusCode::BAD_REQUEST, "notes trop longues").into_response();
+    }
+    let res = sqlx::query("UPDATE projects SET notes = ? WHERE id = ?")
+        .bind(&form.notes)
+        .bind(project_id)
+        .execute(&state.db)
+        .await;
+    if res.is_ok() {
+        StatusCode::OK.into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "enregistrement impossible").into_response()
+    }
+}
+
+// ---------- export du glossaire (CSV) ----------
+
+/// Champ CSV entre guillemets, guillemets doublés (RFC 4180).
+fn csv_field(s: &str) -> String {
+    format!("\"{}\"", s.replace('"', "\"\""))
+}
+
+/// Liste JSON du glossaire (rafraîchissement du volet après import).
+async fn glossary_json(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let entries: Vec<GlossaryRow> = sqlx::query_as(
+        "SELECT id, term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
+    )
+    .bind(project_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    let rows: Vec<serde_json::Value> = entries
+        .into_iter()
+        .map(|g| {
+            serde_json::json!({
+                "id": g.id,
+                "term": g.term,
+                "translation": g.translation,
+                "mistranslation": g.mistranslation,
+            })
+        })
+        .collect();
+    axum::Json(rows).into_response()
+}
+
+/// Parseur CSV minimal (RFC 4180) : champs séparés par `;`, guillemets
+/// doublés pour échapper, retours à la ligne CRLF tolérés.
+fn parse_csv(content: &str) -> Vec<Vec<String>> {
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut row: Vec<String> = Vec::new();
+    let mut field = String::new();
+    let mut in_quotes = false;
+    let mut chars = content.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                if in_quotes && chars.peek() == Some(&'"') {
+                    chars.next();
+                    field.push('"');
+                } else {
+                    in_quotes = !in_quotes;
+                }
+            }
+            ';' if !in_quotes => {
+                row.push(std::mem::take(&mut field));
+            }
+            '\n' if !in_quotes => {
+                if field.ends_with('\r') {
+                    field.pop();
+                }
+                row.push(std::mem::take(&mut field));
+                if !row.iter().all(|f| f.trim().is_empty()) {
+                    rows.push(std::mem::take(&mut row));
+                } else {
+                    row.clear();
+                }
+            }
+            _ => field.push(c),
+        }
+    }
+    if !field.is_empty() || !row.is_empty() {
+        row.push(field);
+        if !row.iter().all(|f| f.trim().is_empty()) {
+            rows.push(row);
+        }
+    }
+    rows
+}
+
+/// Import d'un glossaire CSV (mêmes colonnes que l'export : terme;traduction;mistraduction).
+async fn import_glossary(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    mut multipart: Multipart,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let mut content: Option<String> = None;
+    while let Some(field) = multipart.next_field().await.ok().flatten() {
+        if field.name() == Some("file") {
+            let data = field.bytes().await.unwrap_or_default();
+            if data.len() > MAX_TEXT {
+                return (StatusCode::BAD_REQUEST, "fichier trop volumineux").into_response();
+            }
+            content = Some(String::from_utf8_lossy(&data).into_owned());
+        }
+    }
+    let Some(content) = content else {
+        return (StatusCode::BAD_REQUEST, "aucun fichier reçu").into_response();
+    };
+    let mut rows = parse_csv(&content);
+    // Ligne d'en-tête optionnelle (comme dans l'export).
+    if rows
+        .first()
+        .and_then(|r| r.first())
+        .map(|t| t.trim().to_lowercase() == "terme")
+        .unwrap_or(false)
+    {
+        rows.remove(0);
+    }
+    let mut imported = 0usize;
+    for row in rows {
+        if row.len() < 2 {
+            continue;
+        }
+        let term = row[0].trim().to_string();
+        let translation = row[1].trim().to_string();
+        let mistranslation = row.get(2).map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
+        if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
+            continue;
+        }
+        let existing: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM glossary WHERE project_id = ? AND term = ? COLLATE NOCASE",
+        )
+        .bind(project_id)
+        .bind(&term)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None);
+        let ok = if let Some(id) = existing {
+            sqlx::query("UPDATE glossary SET translation = ?, mistranslation = ? WHERE id = ?")
+                .bind(&translation)
+                .bind(&mistranslation)
+                .bind(id)
+                .execute(&state.db)
+                .await
+                .is_ok()
+        } else {
+            sqlx::query("INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)")
+                .bind(project_id)
+                .bind(&term)
+                .bind(&translation)
+                .bind(&mistranslation)
+                .execute(&state.db)
+                .await
+                .is_ok()
+        };
+        if ok {
+            imported += 1;
+        }
+    }
+    axum::Json(serde_json::json!({"imported": imported})).into_response()
+}
+
+async fn export_glossary_csv(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let entries: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
+    )
+    .bind(project_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    // BOM UTF-8 pour qu'Excel ouvre correctement les accents.
+    let mut csv = String::from("\u{feff}terme;traduction;mistraduction\r\n");
+    for (term, tr, mis) in entries {
+        csv.push_str(&csv_field(&term));
+        csv.push(';');
+        csv.push_str(&csv_field(&tr));
+        csv.push(';');
+        csv.push_str(&csv_field(mis.as_deref().unwrap_or("")));
+        csv.push_str("\r\n");
+    }
+    (
+        [
+            (header::CONTENT_TYPE, "text/csv; charset=utf-8"),
+            (
+                header::CONTENT_DISPOSITION,
+                "attachment; filename=\"glossaire.csv\"",
+            ),
+        ],
+        csv,
+    )
+        .into_response()
+}
+
 async fn delete_image(
     State(state): State<SharedState>,
     Path(image_id): Path<i64>,
@@ -980,24 +1344,36 @@ struct SettingsForm {
     shortcut_next: Option<String>,
     shortcut_preview: Option<String>,
     translate_server: Option<String>,
+    translate_timeout: Option<String>,
+    shortcut_glossary: Option<String>,
+    shortcut_notes: Option<String>,
+    shortcut_translate: Option<String>,
+    notes_side: Option<String>,
+    notes_close_outside: Option<String>,
 }
 
 async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
-    let row: Option<(i64, String, Option<String>)> = sqlx::query_as(
-        "SELECT s.autosave, s.shortcuts, s.translate_server FROM user_settings s WHERE s.user_id = ?",
+    let row: Option<(i64, String, Option<String>, i64, String, i64)> = sqlx::query_as(
+        "SELECT s.autosave, s.shortcuts, s.translate_server, s.translate_timeout, s.notes_side, s.notes_close_outside FROM user_settings s WHERE s.user_id = ?",
     )
     .bind(user_id)
     .fetch_optional(db)
     .await
     .unwrap_or(None);
     match row {
-        Some((autosave, shortcuts, server)) => {
+        Some((autosave, shortcuts, server, timeout, side, close_outside)) => {
             let mut s = UserSettings {
                 autosave: autosave != 0,
                 shortcut_prev: "Alt+ArrowLeft".into(),
                 shortcut_next: "Alt+ArrowRight".into(),
                 shortcut_preview: "ALT+ArrowUp".into(),
+                shortcut_glossary: "Alt+G".into(),
+                shortcut_notes: "Alt+N".into(),
+                shortcut_translate: "Alt+T".into(),
                 translate_server: server,
+                translate_timeout: timeout.clamp(1, 120),
+                notes_side: if side == "left" { "left".into() } else { "right".into() },
+                notes_close_outside: close_outside != 0,
             };
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&shortcuts) {
                 if let Some(p) = v.get("prev").and_then(|x| x.as_str()) {
@@ -1009,6 +1385,15 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 if let Some(pr) = v.get("preview").and_then(|x| x.as_str()) {
                     s.shortcut_preview = pr.to_string();
                 }
+                if let Some(g) = v.get("glossary").and_then(|x| x.as_str()) {
+                    s.shortcut_glossary = g.to_string();
+                }
+                if let Some(n) = v.get("notes").and_then(|x| x.as_str()) {
+                    s.shortcut_notes = n.to_string();
+                }
+                if let Some(t) = v.get("translate").and_then(|x| x.as_str()) {
+                    s.shortcut_translate = t.to_string();
+                }
             }
             s
         }
@@ -1019,6 +1404,12 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             shortcut_preview: "ALT+ArrowUp".into(),
             // Préréglage : le service libretranslate du docker-compose (interne).
             translate_server: Some("http://libretranslate:5000".into()),
+            translate_timeout: 10,
+            shortcut_glossary: "Alt+G".into(),
+            shortcut_notes: "Alt+N".into(),
+            shortcut_translate: "Alt+T".into(),
+            notes_side: "right".into(),
+            notes_close_outside: true,
         },
     }
 }
@@ -1053,22 +1444,43 @@ async fn save_settings(
         "prev": sanitize_shortcut(form.shortcut_prev.as_deref().unwrap_or("Alt+ArrowLeft")),
         "next": sanitize_shortcut(form.shortcut_next.as_deref().unwrap_or("Alt+ArrowRight")),
         "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("ALT+ArrowUp")),
+        "glossary": sanitize_shortcut(form.shortcut_glossary.as_deref().unwrap_or("Alt+G")),
+        "notes": sanitize_shortcut(form.shortcut_notes.as_deref().unwrap_or("Alt+N")),
+        "translate": sanitize_shortcut(form.shortcut_translate.as_deref().unwrap_or("Alt+T")),
     })
     .to_string();
+    // Côté d'affichage du volet Notes : gauche ou droite (droite par défaut).
+    let notes_side = match form.notes_side.as_deref() {
+        Some("left") => "left",
+        _ => "right",
+    };
+    // Fermer le volet Notes quand on clique à l'extérieur (activé par défaut).
+    let notes_close_outside = form.notes_close_outside.as_deref() == Some("on")
+        || form.notes_close_outside.as_deref() == Some("true");
     // Accepte tout serveur http:// ou https:// ; le slash final est
     // retiré pour que "{server}/translate" reste une URL valide.
     let server = form
         .translate_server
         .map(|s| s.trim().trim_end_matches('/').to_string())
         .filter(|s| s.starts_with("http://") || s.starts_with("https://"));
+    // Temps d'attente maximal des traductions (1 à 120 secondes, 10 s par défaut).
+    let timeout = form
+        .translate_timeout
+        .as_deref()
+        .and_then(|s| s.trim().parse::<i64>().ok())
+        .unwrap_or(10)
+        .clamp(1, 120);
     let res = sqlx::query(
-        "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server) VALUES (?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server",
+        "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server, translate_timeout, notes_side, notes_close_outside) VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server, translate_timeout = excluded.translate_timeout, notes_side = excluded.notes_side, notes_close_outside = excluded.notes_close_outside",
     )
     .bind(user.0)
     .bind(autosave as i64)
     .bind(&shortcuts)
     .bind(&server)
+    .bind(timeout)
+    .bind(notes_side)
+    .bind(notes_close_outside as i64)
     .execute(&state.db)
     .await;
     let s = load_settings(&state.db, user.0).await;
@@ -1126,16 +1538,17 @@ async fn translate_text(
     if form.text.trim().is_empty() || form.text.len() > MAX_TEXT {
         return (StatusCode::BAD_REQUEST, "texte invalide").into_response();
     }
-    let server = sqlx::query_scalar::<_, Option<String>>(
-        "SELECT translate_server FROM user_settings WHERE user_id = ?",
+    let (server, timeout) = sqlx::query_as::<_, (Option<String>, i64)>(
+        "SELECT translate_server, translate_timeout FROM user_settings WHERE user_id = ?",
     )
     .bind(user.0)
     .fetch_optional(&state.db)
     .await
     .ok()
     .flatten()
-    .flatten()
-    .unwrap_or_else(|| "http://libretranslate:5000".into());
+    .map(|(s, t)| (s, t.clamp(1, 120)))
+    .unwrap_or_else(|| (Some("http://libretranslate:5000".into()), 10));
+    let server = server.unwrap_or_else(|| "http://libretranslate:5000".into());
     // Langues du projet si précisé (et appartenant à l'utilisateur), sinon en→fr.
     let (mut source, mut target) = ("en".to_string(), "fr".to_string());
     if let Some(pid) = form.project_id {
@@ -1160,7 +1573,7 @@ async fn translate_text(
     });
     let res = tokio::task::spawn_blocking(move || -> Result<serde_json::Value, String> {
         let r = ureq::post(&format!("{server}/translate"))
-            .timeout(std::time::Duration::from_secs(10))
+            .timeout(std::time::Duration::from_secs(timeout as u64))
             .send_json(body)
             .map_err(|e| e.to_string())?;
         r.into_json::<serde_json::Value>().map_err(|e| e.to_string())
