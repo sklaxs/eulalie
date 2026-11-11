@@ -44,10 +44,12 @@ textarea#editor:focus{outline:none}
 .counter{color:var(--muted);font-size:13px}
 .saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
 .saved.show{opacity:1}
-/* bouton Traduire vertical : pleine hauteur du bord gauche du panneau source */
-#translateBtn{display:none;position:absolute;left:0;top:0;bottom:0;width:0.4cm;border:none;border-right:1px solid var(--border);background:linear-gradient(180deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;writing-mode:vertical-rl;padding:10px 0;box-sizing:border-box;white-space:nowrap;overflow:hidden;z-index:5}
+/* bouton Traduire vertical : centré sur le bord gauche du panneau source */
+#translateBtn{display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);width:0.4cm;max-height:70%;border:none;border-radius:0 8px 8px 0;background:linear-gradient(180deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;writing-mode:vertical-rl;padding:14px 0;box-sizing:border-box;white-space:nowrap;overflow:hidden;z-index:5;box-shadow:2px 0 12px rgba(0,0,0,.3)}
 #translateBtn:hover{filter:brightness(1.15)}
 #translateBtn:disabled{opacity:.6;cursor:wait}
+nav .navbtn-icon{background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0;align-items:center}
+nav .navbtn-icon:hover{color:var(--accent2)}
 /* modal images */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
@@ -70,6 +72,8 @@ textarea#editor:focus{outline:none}
 .gloss-form{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .gloss-form input{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px}
 .gloss-form input:focus{outline:none;border-color:var(--accent)}
+.gloss-auto{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);width:100%;cursor:pointer}
+.gloss-row .autolbl{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;flex:0 0 auto}
 .gloss-list{display:flex;flex-direction:column;gap:6px}
 .gloss-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg3);font-size:14px;cursor:pointer}
 .gloss-row:hover{border-color:var(--accent)}
@@ -86,6 +90,8 @@ textarea#editor:focus{outline:none}
 #notesPanel .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px}
 #notesPanel .panel-head h3{margin:0;font-size:15px}
 #notesPanel .panel-body{flex:1;overflow:auto;padding:14px 16px}
+#notesArea{width:100%;min-height:calc(100% - 24px);background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:12px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
+#notesArea:focus{outline:none;border-color:var(--accent)}
 #notesToggle{position:fixed;top:50%;transform:translateY(-50%);z-index:46;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:10px 4px;font-size:13px;cursor:pointer;display:none}
 #notesToggle:hover{color:var(--accent2);border-color:var(--accent)}
 #notesToggle.show{display:block}
@@ -132,8 +138,8 @@ header.top{flex-wrap:wrap;gap:8px}
 <button class="btn-sm" type="submit">↻</button>
 </form>
 <nav style="display:flex;gap:12px;align-items:center">
-<button class="navbtn-icon" id="glossBtn" title="Glossaire du livre ({{ shortcut_glossary }})" style="background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
-<button class="navbtn-icon" id="notesBtn" title="Notes de traduction ({{ shortcut_notes }})" style="background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
+<button class="navbtn-icon" id="glossBtn" title="Glossaire du livre ({{ shortcut_glossary }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
+<button class="navbtn-icon" id="notesBtn" title="Notes de traduction ({{ shortcut_notes }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <a href="/projects/{{ project.id }}/export.md" title="Exporter en Markdown" style="display:inline-flex" download><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
 <a href="/settings" title="Paramètres" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></a>
 <a href="/" title="Projets" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /> </svg></a>
@@ -166,7 +172,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <button id="imgBtn" title="Images"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M15 8h.01" /> <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /> <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /> <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /> </svg></button>
 <button onclick="insert('[texte](https://)')" title="Insérer un lien"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M9 15l6 -6" /> <path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /> <path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /> </svg></button>
 <span style="flex:1"></span>
-<button id="syncBtn" title="Synchroniser le défilement des deux panneaux">🔗 Synchro</button>
+<button id="syncBtn" title="Synchroniser le défilement des deux panneaux"></button>
 <button id="togglePreview">👁 Aperçu</button>
 {% if !autosave %}<button id="saveBtn" onclick="saveNow()">💾 Sauvegarder</button>{% endif %}
 </div>
@@ -183,6 +189,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <form class="gloss-form" id="glossForm">
 <input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
 <input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
+<label class="gloss-auto"><input type="checkbox" name="auto" id="glossAuto" checked> Appliquer aux traductions automatiques</label>
 <button class="btn-sm" type="submit" id="glossAddBtn">Ajouter</button>
 </form>
 {% if glossary.is_empty() %}
@@ -190,8 +197,8 @@ header.top{flex-wrap:wrap;gap:8px}
 {% endif %}
 <div class="gloss-list" id="glossList">
 {% for g in glossary %}
-<div class="gloss-row" data-id="{{ g.id }}" data-trans="{{ g.translation }}" title="Cliquer pour insérer la traduction au curseur">
-<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
+<div class="gloss-row" data-id="{{ g.id }}" data-term="{{ g.term }}" data-trans="{{ g.translation }}" title="Cliquer pour insérer la traduction au curseur">
+<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><label class="autolbl" title="Appliquer aux traductions automatiques"><input type="checkbox" class="auto-ck" {% if g.auto %}checked{% endif %}> auto</label><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
 </div>
 {% endfor %}
 </div>
@@ -204,29 +211,11 @@ header.top{flex-wrap:wrap;gap:8px}
 <button class="btn-sm" onclick="toggleNotes(false)" title="Masquer le volet">✕</button>
 </div>
 <div class="panel-body">
-<form class="note-form" id="noteForm">
-<textarea id="noteContent" placeholder="Note de traduction, remarque, choix éditorial…"></textarea>
-<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
-<select id="noteChapter" title="Chapitre lié à la note">
-<option value="">— Sans lien de chapitre —</option>
-{% for c in chapters %}<option value="{{ c.idx }}" {% if c.idx == current.idx %}selected{% endif %}>Chap. {{ c.idx + 1 }} — {{ c.title }}</option>{% endfor %}
-</select>
-<button class="btn-sm primary" type="submit" id="noteAddBtn">Ajouter</button>
-</div>
-</form>
-<div id="notesStatus"></div>
-<div id="notesList">
-{% for n in notes %}
-<div class="note-row" data-id="{{ n.id }}">
-{% match n.chapter_idx %}{% when Some with (c) %}<span class="ch">Chap. {{ c + 1 }}</span><br>{% when None %}{% endmatch %}
-<span class="content">{{ n.content }}</span>
-<span class="del" title="Supprimer la note">🗑</span>
-</div>
-{% endfor %}
-</div>
+<textarea id="notesArea" placeholder="Notes de traduction, remarques, choix éditoriaux…">{{ notes }}</textarea>
+<div id="notesStatus" style="color:var(--muted);font-size:12px;margin-top:6px;min-height:16px"></div>
 </div>
 </aside>
-<button id="notesToggle" class="side-{{ notes_side }}" title="Afficher les notes ({{ shortcut_notes }})">›</button>
+<button id="notesToggle" class="side-{{ notes_side }}" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -376,11 +365,26 @@ const translateBtn=document.getElementById('translateBtn');
 const MAX_SEL=50000;
 let selText='';
 function resetTranslateBtn(){translateBtn.textContent='🌍 Traduire';translateBtn.disabled=false;translateBtn.style.display='none';}
+// Sélection bornée au panneau source : une sélection qui déborde (Ctrl+A,
+// glissement jusqu'aux boutons…) est découpée à l'intersection avec le texte
+// source, sinon « Traduire (6945 car.) Synchro Aperçu » se retrouvait traduit.
+function sourceSelectionText(){
+const sel=window.getSelection();
+if(!sel||sel.rangeCount===0)return '';
+const r=sel.getRangeAt(0);
+if(!r.intersectsNode(sourcePane))return '';
+const paneRange=document.createRange();
+paneRange.selectNodeContents(sourcePane);
+const inter=r.cloneRange();
+if(inter.compareBoundaryPoints(Range.START_TO_START,paneRange)<0)inter.setStart(paneRange.startContainer,paneRange.startOffset);
+if(inter.compareBoundaryPoints(Range.END_TO_END,paneRange)>0)inter.setEnd(paneRange.endContainer,paneRange.endOffset);
+if(inter.collapsed)return '';
+return inter.toString().trim();
+}
 document.addEventListener('selectionchange',()=>{
 if(translateBtn.disabled)return;
-const sel=window.getSelection();
-const t=sel?sel.toString().trim():'';
-if(t.length>1&&t.length<MAX_SEL&&sourcePane.contains(sel.anchorNode)){
+const t=sourceSelectionText();
+if(t.length>1&&t.length<MAX_SEL){
 selText=t;
 translateBtn.textContent=t.length>40?'🌍 Traduire ('+t.length+' car.)':'🌍 Traduire « '+t+' »';
 translateBtn.style.display='block';
@@ -419,9 +423,13 @@ document.getElementById('glossForm').addEventListener('submit',e=>{
 e.preventDefault();
 const term=document.getElementById('glossTerm').value;
 const trans=document.getElementById('glossTrans').value;
+const auto=document.getElementById('glossAuto').checked;
 const btn=document.getElementById('glossAddBtn');
+// Avertissement (non bloquant) si le terme source existe déjà.
+const dup=[...document.querySelectorAll('#glossList .gloss-row .term')].some(el=>el.textContent.trim().toLowerCase()===term.trim().toLowerCase());
+if(dup)showToast('⚠ Ce terme existe déjà — la traduction sera mise à jour.');
 btn.disabled=true;
-fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)})
+fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)+(auto?'&auto=1':'')})
 .then(r=>{if(!r.ok)throw 0;return r.json()})
 .then(g=>{
 const list=document.getElementById('glossList');
@@ -429,11 +437,14 @@ const note=document.getElementById('glossEmptyNote');if(note)note.remove();
 const row=document.createElement('div');
 row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
 row.title="Cliquer pour insérer la traduction au curseur";
-row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.dataset.term=g.term;
+row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><label class="autolbl" title="Appliquer aux traductions automatiques"><input type="checkbox" class="auto-ck"'+(g.auto?' checked':'')+'> auto</label><span class="del" title="Supprimer">\ud83d\uddd1</span>';
 row.querySelector('.term').textContent=g.term;
 row.querySelector('.trans').textContent=g.translation;
 row.onclick=()=>insert(g.translation);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
+row.querySelector('.auto-ck').onclick=ev=>ev.stopPropagation();
+row.querySelector('.auto-ck').onchange=ev=>toggleGlossAuto(row.dataset.term,g.translation,ev.target.checked);
 list.prepend(row);
 e.target.reset();btn.disabled=false;showToast('Terme ajouté au glossaire.',true,1500);
 })
@@ -442,7 +453,14 @@ e.target.reset();btn.disabled=false;showToast('Terme ajouté au glossaire.',true
 document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
 row.onclick=()=>insert(row.dataset.trans);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(parseInt(row.dataset.id),row.querySelector('.del'));};
+const ck=row.querySelector('.auto-ck');
+ck.onclick=ev=>ev.stopPropagation();
+ck.onchange=ev=>toggleGlossAuto(row.dataset.term,row.dataset.trans,ev.target.checked);
 });
+function toggleGlossAuto(term,trans,auto){
+fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)+(auto?'&auto=1':'')})
+.catch(()=>showToast("Échec de la mise à jour."));
+}
 function deleteGloss(id,el){
 if(!confirm('Supprimer ce terme du glossaire ?'))return;
 fetch('/glossary/'+id+'/delete',{method:'POST'})
@@ -450,60 +468,48 @@ fetch('/glossary/'+id+'/delete',{method:'POST'})
 .catch(()=>showToast('Suppression impossible.'));
 }
 
-// Notes de traduction : volet latéral (gauche ou droite selon les paramètres)
+// Notes de traduction : volet latéral libre (gauche ou droite selon les paramètres)
 const notesPanel=document.getElementById('notesPanel');
 const notesToggle=document.getElementById('notesToggle');
 const notesBtn=document.getElementById('notesBtn');
+const NOTES_CLOSE_OUTSIDE={{ notes_close_outside }};
 function toggleNotes(open){
 if(open===undefined)open=!notesPanel.classList.contains('open');
 notesPanel.classList.toggle('open',open);
 notesToggle.classList.toggle('show',!open);
-notesToggle.innerHTML=notesPanel.classList.contains('side-left')?(open?'‹':'›'):(open?'›':'‹');
-if(open)document.getElementById('noteContent').focus();
+// Le bouton Traduire vertical ne doit pas rester masqué derrière le volet gauche.
+if(open&&notesPanel.classList.contains('side-left')&&translateBtn.style.display==='block'){resetTranslateBtn();selText='';}
+if(open)document.getElementById('notesArea').focus();
 }
 notesBtn.onclick=()=>toggleNotes(true);
 notesToggle.onclick=()=>toggleNotes(true);
-document.getElementById('noteForm').addEventListener('submit',e=>{
-e.preventDefault();
-const content=document.getElementById('noteContent').value;
-if(!content.trim())return;
-const chapter=document.getElementById('noteChapter').value;
-const btn=document.getElementById('noteAddBtn');
-btn.disabled=true;
-fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'content='+encodeURIComponent(content)+'&chapter_idx='+(chapter||'')})
-.then(r=>{if(!r.ok)throw 0;return r.json()})
-.then(n=>{
-const list=document.getElementById('notesList');
-const row=document.createElement('div');
-row.className='note-row';row.dataset.id=n.id;
-let html='';
-if(n.chapter_idx!==null&&n.chapter_idx!==undefined)html+='<span class="ch">Chap. '+(n.chapter_idx+1)+'</span><br>';
-html+='<span class="content"></span><span class="del" title="Supprimer la note">\ud83d\uddd1</span>';
-row.innerHTML=html;
-row.querySelector('.content').textContent=n.content;
-row.querySelector('.del').onclick=()=>deleteNote(n.id,row.querySelector('.del'));
-list.prepend(row);
-document.getElementById('noteContent').value='';
-document.getElementById('notesStatus').textContent='';
-showToast('Note ajoutée.',true,1500);
-})
-.catch(()=>{document.getElementById('notesStatus').textContent="Échec de l'ajout.";})
-.finally(()=>btn.disabled=false);
+// Fermeture au clic extérieur (option des Paramètres) : on peut garder le volet
+// ouvert pour consulter le texte pendant la prise de notes.
+document.addEventListener('click',e=>{
+if(!notesPanel.classList.contains('open')||!NOTES_CLOSE_OUTSIDE)return;
+if(notesPanel.contains(e.target)||notesToggle.contains(e.target)||notesBtn.contains(e.target))return;
+toggleNotes(false);
 });
-document.querySelectorAll('#notesList .note-row .del').forEach(el=>{
-el.onclick=()=>deleteNote(parseInt(el.closest('.note-row').dataset.id),el);
+// Sauvegarde automatique 1 s après la saisie.
+const notesArea=document.getElementById('notesArea');
+const notesStatus=document.getElementById('notesStatus');
+let notesTimer=null;
+notesArea.addEventListener('input',()=>{
+notesStatus.textContent='…';
+clearTimeout(notesTimer);
+notesTimer=setTimeout(()=>{
+fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'notes='+encodeURIComponent(notesArea.value)})
+.then(r=>{if(!r.ok)throw 0;notesStatus.textContent='✓ Enregistré à '+new Date().toLocaleTimeString();})
+.catch(()=>notesStatus.textContent="Échec de l'enregistrement.");
+},1000);
 });
-function deleteNote(id,el){
-if(!confirm('Supprimer cette note ?'))return;
-fetch('/notes/'+id+'/delete',{method:'POST'})
-.then(r=>{if(!r.ok)throw 0;el.closest('.note-row').remove();showToast('Note supprimée.',true,1500);})
-.catch(()=>showToast('Suppression impossible.'));
-}
 
 // Synchronisation du défilement entre le panneau source et l'éditeur.
 const syncBtn=document.getElementById('syncBtn');
 let scrollSync=localStorage.getItem('eulalie-scroll-sync')!=='off';
-function updateSyncBtn(){syncBtn.classList.toggle('sync-on',scrollSync);syncBtn.title=(scrollSync?'Désactiver':'Activer')+' la synchronisation du défilement';}
+const SYNC_ON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /> <path d="M6 4v4" /> <path d="M6 12v8" /> <path d="M13.823 15.176a2 2 0 1 0 -2.638 2.651" /> <path d="M12 4v10" /> <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /> <path d="M18 4v1" /> <path d="M18 9v5" /> <path d="M15 19l2 2l4 -4" /> </svg> Synchro';
+const SYNC_OFF='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 10a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /> <path d="M6 4v4" /> <path d="M6 12v8" /> <path d="M13.499 14.675a2 2 0 1 0 -1.499 3.325" /> <path d="M12 4v10" /> <path d="M12 18v2" /> <path d="M16 7a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /> <path d="M18 4v1" /> <path d="M18 9v3" /> <path d="M16 19a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /> <path d="M17 21l4 -4" /> </svg> Synchro';
+function updateSyncBtn(){syncBtn.classList.toggle('sync-on',scrollSync);syncBtn.innerHTML=scrollSync?SYNC_ON:SYNC_OFF;syncBtn.title=(scrollSync?'Désactiver':'Activer')+' la synchronisation du défilement';}
 updateSyncBtn();
 syncBtn.onclick=()=>{scrollSync=!scrollSync;localStorage.setItem('eulalie-scroll-sync',scrollSync?'on':'off');updateSyncBtn();};
 let syncing=false;

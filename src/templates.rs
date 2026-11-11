@@ -47,7 +47,8 @@ pub struct EditorTemplate {
     pub images: Vec<ImageRow>,
     pub langs: Vec<LangOption>,
     pub glossary: Vec<GlossaryRow>,
-    pub notes: Vec<NoteRow>,
+    pub notes: String,
+    pub notes_close_outside: bool,
     pub shortcut_glossary: String,
     pub shortcut_notes: String,
     pub notes_side: String,
@@ -71,13 +72,7 @@ pub struct GlossaryRow {
     pub id: i64,
     pub term: String,
     pub translation: String,
-}
-
-#[derive(sqlx::FromRow)]
-pub struct NoteRow {
-    pub id: i64,
-    pub chapter_idx: Option<i64>,
-    pub content: String,
+    pub auto: bool,
 }
 
 #[derive(sqlx::FromRow)]
@@ -124,6 +119,7 @@ pub struct UserSettings {
     pub translate_server: Option<String>,
     pub translate_timeout: i64,
     pub notes_side: String,
+    pub notes_close_outside: bool,
 }
 
 

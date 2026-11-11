@@ -94,8 +94,7 @@ async fn main() -> Result<()> {
         .route("/projects/:id/glossary", post(add_glossary_term))
         .route("/glossary/:id/delete", post(delete_glossary_term))
         .route("/projects/:id/glossary.csv", get(export_glossary_csv))
-        .route("/projects/:id/notes", post(add_note))
-        .route("/notes/:id/delete", post(delete_note))
+        .route("/projects/:id/notes", post(save_notes))
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
         .route("/healthz", get(healthz))
@@ -123,6 +122,10 @@ mod tests {
         assert_eq!(replace_ci("ACCOUNTABILITY", "accountability", "responsable"), "Responsable");
         assert_eq!(replace_ci("rien à faire", "accountability", "responsable"), "rien à faire");
         assert_eq!(replace_ci("", "accountability", "responsable"), "");
+        // Frontières de mots : pas de remplacement à l'intérieur d'un mot plus grand.
+        assert_eq!(replace_ci("Libretranslate", "translate", "traduction"), "Libretranslate");
+        assert_eq!(replace_ci("Libretranslate est un translate", "translate", "traduction"), "Libretranslate est un traduction");
+        assert_eq!(replace_ci("l'accountability", "accountability", "responsable"), "l'accountability");
     }
 }
 
@@ -580,19 +583,17 @@ async fn editor_page_inner(
     .await
     .unwrap_or_default();
     let glossary: Vec<GlossaryRow> = sqlx::query_as(
-        "SELECT id, term, translation FROM glossary WHERE project_id = ? ORDER BY term",
+        "SELECT id, term, translation, auto FROM glossary WHERE project_id = ? ORDER BY term",
     )
     .bind(project_id)
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
-    let notes: Vec<NoteRow> = sqlx::query_as(
-        "SELECT id, chapter_idx, content FROM project_notes WHERE project_id = ? ORDER BY id DESC",
-    )
-    .bind(project_id)
-    .fetch_all(&state.db)
-    .await
-    .unwrap_or_default();
+    let notes: String = sqlx::query_scalar("SELECT notes FROM projects WHERE id = ?")
+        .bind(project_id)
+        .fetch_one(&state.db)
+        .await
+        .unwrap_or_default();
     let all_langs = ["en", "fr", "de", "es", "it", "pt", "nl", "ru", "zh", "ja", "ar"];
     let langs: Vec<LangOption> = all_langs
         .iter()
@@ -621,6 +622,7 @@ async fn editor_page_inner(
             shortcut_glossary: settings.shortcut_glossary,
             shortcut_notes: settings.shortcut_notes,
             notes_side: settings.notes_side,
+            notes_close_outside: settings.notes_close_outside,
             images,
             langs,
             glossary,
@@ -948,6 +950,7 @@ async fn set_project_langs(
 struct GlossaryForm {
     term: String,
     translation: String,
+    auto: Option<String>,
 }
 
 const MAX_TERM: usize = 200;
@@ -967,22 +970,26 @@ async fn add_glossary_term(
     }
     let term = form.term.trim().to_string();
     let translation = form.translation.trim().to_string();
+    let auto = form.auto.as_deref() != Some("") && form.auto.is_some();
     if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
         return (StatusCode::BAD_REQUEST, "terme ou traduction invalide").into_response();
     }
+    // Upsert : un doublon met à jour la traduction (le contrôle côté client
+    // affiche un avertissement, sans interdire).
     let res = sqlx::query(
-        "INSERT INTO glossary (project_id, term, translation) VALUES (?, ?, ?)
-         ON CONFLICT(project_id, term) DO UPDATE SET translation = excluded.translation",
+        "INSERT INTO glossary (project_id, term, translation, auto) VALUES (?, ?, ?, ?)
+         ON CONFLICT(project_id, term) DO UPDATE SET translation = excluded.translation, auto = excluded.auto",
     )
     .bind(project_id)
     .bind(&term)
     .bind(&translation)
+    .bind(auto as i64)
     .execute(&state.db)
     .await;
     match res {
         Ok(r) => {
             let id: i64 = r.last_insert_rowid() as i64;
-            axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation})).into_response()
+            axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "auto": auto})).into_response()
         }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "insertion impossible").into_response(),
     }
@@ -1011,69 +1018,37 @@ async fn delete_glossary_term(
     }
 }
 
-// ---------- notes de traduction par projet ----------
+// ---------- notes de traduction par projet (prise de notes libre) ----------
 
 #[derive(Deserialize)]
-struct NoteForm {
-    content: String,
-    chapter_idx: Option<i64>,
+struct NotesForm {
+    notes: String,
 }
 
-async fn add_note(
+async fn save_notes(
     State(state): State<SharedState>,
     Path(project_id): Path<i64>,
     session: Session,
-    Form(form): Form<NoteForm>,
-) -> Response {
+    Form(form): Form<NotesForm>,
+) -> impl IntoResponse {
     let Ok(user) = require_user(&session).await else {
         return Redirect::to("/login").into_response();
     };
     if load_project(&state, user.0, project_id).await.is_err() {
         return StatusCode::NOT_FOUND.into_response();
     }
-    let content = form.content.trim().to_string();
-    if content.is_empty() || content.len() > MAX_TEXT {
-        return (StatusCode::BAD_REQUEST, "note invalide").into_response();
+    if form.notes.len() > MAX_TEXT {
+        return (StatusCode::BAD_REQUEST, "notes trop longues").into_response();
     }
-    let chapter_idx = form.chapter_idx.filter(|i| *i >= 0);
-    let res = sqlx::query(
-        "INSERT INTO project_notes (project_id, chapter_idx, content) VALUES (?, ?, ?)",
-    )
-    .bind(project_id)
-    .bind(chapter_idx)
-    .bind(&content)
-    .execute(&state.db)
-    .await;
-    match res {
-        Ok(r) => axum::Json(serde_json::json!({
-            "id": r.last_insert_rowid() as i64,
-            "chapter_idx": chapter_idx,
-            "content": content
-        }))
-        .into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "insertion impossible").into_response(),
-    }
-}
-
-async fn delete_note(
-    State(state): State<SharedState>,
-    Path(id): Path<i64>,
-    session: Session,
-) -> impl IntoResponse {
-    let Ok(user) = require_user(&session).await else {
-        return Redirect::to("/login").into_response();
-    };
-    let res = sqlx::query(
-        "DELETE FROM project_notes WHERE id = ? AND project_id IN (SELECT id FROM projects WHERE user_id = ?)",
-    )
-    .bind(id)
-    .bind(user.0)
-    .execute(&state.db)
-    .await;
-    match res {
-        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
-        Ok(_) => StatusCode::NOT_FOUND.into_response(),
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "suppression impossible").into_response(),
+    let res = sqlx::query("UPDATE projects SET notes = ? WHERE id = ?")
+        .bind(&form.notes)
+        .bind(project_id)
+        .execute(&state.db)
+        .await;
+    if res.is_ok() {
+        StatusCode::OK.into_response()
+    } else {
+        (StatusCode::INTERNAL_SERVER_ERROR, "enregistrement impossible").into_response()
     }
 }
 
@@ -1203,18 +1178,19 @@ struct SettingsForm {
     shortcut_glossary: Option<String>,
     shortcut_notes: Option<String>,
     notes_side: Option<String>,
+    notes_close_outside: Option<String>,
 }
 
 async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
-    let row: Option<(i64, String, Option<String>, i64, String)> = sqlx::query_as(
-        "SELECT s.autosave, s.shortcuts, s.translate_server, s.translate_timeout, s.notes_side FROM user_settings s WHERE s.user_id = ?",
+    let row: Option<(i64, String, Option<String>, i64, String, i64)> = sqlx::query_as(
+        "SELECT s.autosave, s.shortcuts, s.translate_server, s.translate_timeout, s.notes_side, s.notes_close_outside FROM user_settings s WHERE s.user_id = ?",
     )
     .bind(user_id)
     .fetch_optional(db)
     .await
     .unwrap_or(None);
     match row {
-        Some((autosave, shortcuts, server, timeout, side)) => {
+        Some((autosave, shortcuts, server, timeout, side, close_outside)) => {
             let mut s = UserSettings {
                 autosave: autosave != 0,
                 shortcut_prev: "Alt+ArrowLeft".into(),
@@ -1225,6 +1201,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 translate_server: server,
                 translate_timeout: timeout.clamp(1, 120),
                 notes_side: if side == "left" { "left".into() } else { "right".into() },
+                notes_close_outside: close_outside != 0,
             };
             if let Ok(v) = serde_json::from_str::<serde_json::Value>(&shortcuts) {
                 if let Some(p) = v.get("prev").and_then(|x| x.as_str()) {
@@ -1256,6 +1233,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             shortcut_glossary: "Alt+G".into(),
             shortcut_notes: "Alt+N".into(),
             notes_side: "right".into(),
+            notes_close_outside: true,
         },
     }
 }
@@ -1299,6 +1277,9 @@ async fn save_settings(
         Some("left") => "left",
         _ => "right",
     };
+    // Fermer le volet Notes quand on clique à l'extérieur (activé par défaut).
+    let notes_close_outside = form.notes_close_outside.as_deref() == Some("on")
+        || form.notes_close_outside.as_deref() == Some("true");
     // Accepte tout serveur http:// ou https:// ; le slash final est
     // retiré pour que "{server}/translate" reste une URL valide.
     let server = form
@@ -1313,8 +1294,8 @@ async fn save_settings(
         .unwrap_or(10)
         .clamp(1, 120);
     let res = sqlx::query(
-        "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server, translate_timeout, notes_side) VALUES (?, ?, ?, ?, ?, ?)
-         ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server, translate_timeout = excluded.translate_timeout, notes_side = excluded.notes_side",
+        "INSERT INTO user_settings (user_id, autosave, shortcuts, translate_server, translate_timeout, notes_side, notes_close_outside) VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(user_id) DO UPDATE SET autosave = excluded.autosave, shortcuts = excluded.shortcuts, translate_server = excluded.translate_server, translate_timeout = excluded.translate_timeout, notes_side = excluded.notes_side, notes_close_outside = excluded.notes_close_outside",
     )
     .bind(user.0)
     .bind(autosave as i64)
@@ -1322,6 +1303,7 @@ async fn save_settings(
     .bind(&server)
     .bind(timeout)
     .bind(notes_side)
+    .bind(notes_close_outside as i64)
     .execute(&state.db)
     .await;
     let s = load_settings(&state.db, user.0).await;
@@ -1365,6 +1347,8 @@ fn sanitize_shortcut(s: &str) -> String {
 /// Remplacement insensible à la casse qui préserve la majuscule initiale du
 /// terme trouvé (ex. « accountability » → « responsable », « Accountability »
 /// → « Responsable »). Recherche caractère par caractère (offsets Unicode sûrs).
+/// Respecte les frontières de mots : « translate » ne remplace pas à l'intérieur
+/// de « Libretranslate ».
 fn replace_ci(hay: &str, needle: &str, rep: &str) -> String {
     if needle.is_empty() {
         return hay.to_string();
@@ -1372,13 +1356,18 @@ fn replace_ci(hay: &str, needle: &str, rep: &str) -> String {
     let hay_chars: Vec<char> = hay.chars().collect();
     let needle_lc: Vec<char> = needle.to_lowercase().chars().collect();
     let n = needle_lc.len();
+    let is_word = |c: char| c.is_alphanumeric() || c == '\'' || c == '-';
     let mut out = String::with_capacity(hay.len());
     let mut i = 0;
     while i < hay_chars.len() {
         if i + n <= hay_chars.len() {
-            let matches = needle_lc.iter().zip(&hay_chars[i..i + n]).all(|(nc, hc)| {
-                hc.to_lowercase().next().map(|c| c == *nc).unwrap_or(false)
-            });
+            let before_ok = i == 0 || !is_word(hay_chars[i - 1]);
+            let after_ok = i + n == hay_chars.len() || !is_word(hay_chars[i + n]);
+            let matches = before_ok
+                && after_ok
+                && needle_lc.iter().zip(&hay_chars[i..i + n]).all(|(nc, hc)| {
+                    hc.to_lowercase().next().map(|c| c == *nc).unwrap_or(false)
+                });
             if matches {
                 if hay_chars[i].is_uppercase() {
                     let mut it = rep.chars();
@@ -1449,7 +1438,7 @@ async fn translate_text(
     // jamais), puis à nouveau après traduction pour les termes résiduels.
     let mut text = form.text.clone();
     let entries: Vec<(String, String)> = if let Some(pid) = form.project_id {
-        sqlx::query_as("SELECT term, translation FROM glossary WHERE project_id = ?")
+        sqlx::query_as("SELECT term, translation FROM glossary WHERE project_id = ? AND auto = 1")
             .bind(pid)
             .fetch_all(&state.db)
             .await
