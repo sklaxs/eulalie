@@ -80,11 +80,14 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 .gloss-form{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
 .gloss-form input{flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px}
 .gloss-form input:focus{outline:none;border-color:var(--accent)}
-.gloss-auto{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;white-space:nowrap}
 #glossDupWarn{display:none;color:#ffb454;font-size:12px;width:100%}
+#glossSearch{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;margin-bottom:10px;box-sizing:border-box}
+#glossSearch:focus{outline:none;border-color:var(--accent)}
+.gloss-row .mis{flex:0 1 auto;color:#ffb454;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:32%}
 .gloss-row .autolbl{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;flex:0 0 auto}
 .gloss-list{display:flex;flex-direction:column;gap:6px}
-.gloss-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg3);font-size:14px}
+.gloss-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg3);font-size:14px;cursor:pointer}
+.gloss-row:hover{border-color:var(--accent)}
 .gloss-row .term{font-weight:600;flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gloss-row .arrow{color:var(--muted)}
 .gloss-row .trans{flex:1;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -193,13 +196,14 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="modal">
 <div class="modal-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center"><button class="btn-sm" onclick="closeGlossModal()" title="Fermer">✕</button><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a></div></div>
 <div class="modal-body">
-<p class="hint" style="margin:0 0 10px">Termes de référence du livre. Ils sont appliqués automatiquement aux traductions ; cliquez une traduction pour l'insérer au curseur.</p>
+<p class="hint" style="margin:0 0 10px">Termes de référence du livre. Cliquez une ligne pour insérer la traduction au curseur.</p>
+<input type="text" id="glossSearch" placeholder="🔍 Rechercher : terme, traduction ou mistraduction…">
 <form class="gloss-form" id="glossForm">
 <input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
 <input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
-<label class="gloss-auto"><input type="checkbox" name="auto" id="glossAuto" checked> Forcer la traduction</label>
+<input type="text" name="mistranslation" id="glossMis" placeholder="Mistraduction récurrente (optionnel — ex. ce que LibreTranslate produit)" maxlength="2000">
 <button class="btn-sm primary" type="submit" id="glossAddBtn" style="margin-left:auto">Ajouter</button>
-<span id="glossDupWarn">⚠ Ce terme existe déjà — « Forcer la traduction » a été décoché pour préserver le terme existant.</span>
+<span id="glossDupWarn">⚠ Ce terme existe déjà — la traduction sera mise à jour.</span>
 </form>
 {% if glossary.is_empty() %}
 <p class="empty-note" id="glossEmptyNote">Aucun terme pour l'instant — ajoutez vos références de traduction ci-dessus.</p>
@@ -207,7 +211,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="gloss-list" id="glossList">
 {% for g in glossary %}
 <div class="gloss-row" data-id="{{ g.id }}" data-term="{{ g.term }}" data-trans="{{ g.translation }}">
-<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><label class="autolbl" title="Forcer la traduction (appliquer aux traductions automatiques)"><input type="checkbox" class="auto-ck" {% if g.auto %}checked{% endif %}> forcer</label><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
+<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span>{% match g.mistranslation %}{% when Some with (m) %}<span class="mis" title="Mistraduction récurrente">≠ {{ m }}</span>{% when None %}{% endmatch %}<span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
 </div>
 {% endfor %}
 </div>
@@ -437,10 +441,10 @@ document.getElementById('glossForm').addEventListener('submit',e=>{
 e.preventDefault();
 const term=document.getElementById('glossTerm').value;
 const trans=document.getElementById('glossTrans').value;
-const auto=document.getElementById('glossAuto').checked;
+const mis=document.getElementById('glossMis').value;
 const btn=document.getElementById('glossAddBtn');
 btn.disabled=true;
-fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)+(auto?'&auto=1':'')})
+fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)+'&mistranslation='+encodeURIComponent(mis)})
 .then(r=>{if(!r.ok)throw 0;return r.json()})
 .then(g=>{
 const list=document.getElementById('glossList');
@@ -449,41 +453,39 @@ const row=document.createElement('div');
 row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
 row.title="Cliquer pour insérer la traduction au curseur";
 row.dataset.term=g.term;
-row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><label class="autolbl" title="Forcer la traduction (appliquer aux traductions automatiques)"><input type="checkbox" class="auto-ck"'+(g.auto?' checked':'')+'> forcer</label><span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span>'+(g.mistranslation?'<span class="mis" title="Mistraduction récurrente">≠ </span>':'')+'<span class="del" title="Supprimer">\ud83d\uddd1</span>';
 row.querySelector('.term').textContent=g.term;
 row.querySelector('.trans').textContent=g.translation;
+if(g.mistranslation)row.querySelector('.mis').append(g.mistranslation);
+row.onclick=()=>insert(g.translation);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
-row.querySelector('.auto-ck').onclick=ev=>ev.stopPropagation();
-row.querySelector('.auto-ck').onchange=ev=>toggleGlossAuto(row.dataset.term,g.translation,ev.target.checked);
 list.prepend(row);
 e.target.reset();btn.disabled=false;showToast('Terme ajouté au glossaire.',true,1500);
 })
 .catch(()=>{btn.disabled=false;showToast("Échec de l'ajout au glossaire.");});
 });
 document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
+row.onclick=()=>insert(row.dataset.trans);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(parseInt(row.dataset.id),row.querySelector('.del'));};
-const ck=row.querySelector('.auto-ck');
-ck.onclick=ev=>ev.stopPropagation();
-ck.onchange=ev=>toggleGlossAuto(row.dataset.term,row.dataset.trans,ev.target.checked);
 });
-// Avertissement en direct pendant la saisie du terme : si le terme existe déjà
-// (insensible à la casse), on l'affiche et on décoche « Forcer la traduction »
-// pour que le terme précédemment ajouté reste celui appliqué.
+// Avertissement en direct pendant la saisie du terme : si le terme existe
+// déjà (insensible à la casse), on l'affiche — l'ajout reste possible et met
+// simplement à jour la traduction.
 const glossTermInput=document.getElementById('glossTerm');
 const glossDupWarn=document.getElementById('glossDupWarn');
-const glossAutoCk=document.getElementById('glossAuto');
-function glossTermExists(t){
-return [...document.querySelectorAll('#glossList .gloss-row .term')].some(el=>el.textContent.trim().toLowerCase()===t.trim().toLowerCase());
-}
 glossTermInput.addEventListener('input',()=>{
-const dup=glossTermExists(glossTermInput.value);
+const dup=[...document.querySelectorAll('#glossList .gloss-row .term')].some(el=>el.textContent.trim().toLowerCase()===glossTermInput.value.trim().toLowerCase());
 glossDupWarn.style.display=dup?'block':'none';
-if(dup)glossAutoCk.checked=false;
 });
-function toggleGlossAuto(term,trans,auto){
-fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'term='+encodeURIComponent(term)+'&translation='+encodeURIComponent(trans)+(auto?'&auto=1':'')})
-.catch(()=>showToast("Échec de la mise à jour."));
-}
+// Recherche dans le glossaire : terme source, traduction ou mistraduction.
+document.getElementById('glossSearch').addEventListener('input',e=>{
+const q=e.target.value.trim().toLowerCase();
+document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
+if(!q){row.style.display='flex';return;}
+const hay=(row.dataset.term+' '+row.dataset.trans+' '+(row.querySelector('.mis')?row.querySelector('.mis').textContent:'')).toLowerCase();
+row.style.display=hay.includes(q)?'flex':'none';
+});
+});
 function deleteGloss(id,el){
 fetch('/glossary/'+id+'/delete',{method:'POST'})
 .then(r=>{if(!r.ok)throw 0;el.closest('.gloss-row').remove();showToast('Terme supprimé.',true,1500);})

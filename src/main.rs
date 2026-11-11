@@ -111,24 +111,6 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::replace_ci;
-
-    #[test]
-    fn glossary_replacement_preserves_case() {
-        assert_eq!(replace_ci("accountability matters", "accountability", "responsable"), "responsable matters");
-        assert_eq!(replace_ci("Accountability matters", "accountability", "responsable"), "Responsable matters");
-        assert_eq!(replace_ci("ACCOUNTABILITY", "accountability", "responsable"), "Responsable");
-        assert_eq!(replace_ci("rien à faire", "accountability", "responsable"), "rien à faire");
-        assert_eq!(replace_ci("", "accountability", "responsable"), "");
-        // Frontières de mots : pas de remplacement à l'intérieur d'un mot plus grand.
-        assert_eq!(replace_ci("Libretranslate", "translate", "traduction"), "Libretranslate");
-        assert_eq!(replace_ci("Libretranslate est un translate", "translate", "traduction"), "Libretranslate est un traduction");
-        assert_eq!(replace_ci("l'accountability", "accountability", "responsable"), "l'accountability");
-    }
-}
-
 // ---------- auth ----------
 
 async fn session_user(session: &Session) -> Option<(i64, String)> {
@@ -583,7 +565,7 @@ async fn editor_page_inner(
     .await
     .unwrap_or_default();
     let glossary: Vec<GlossaryRow> = sqlx::query_as(
-        "SELECT id, term, translation, auto FROM glossary WHERE project_id = ? ORDER BY term",
+        "SELECT id, term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
     )
     .bind(project_id)
     .fetch_all(&state.db)
@@ -951,7 +933,7 @@ async fn set_project_langs(
 struct GlossaryForm {
     term: String,
     translation: String,
-    auto: Option<String>,
+    mistranslation: Option<String>,
 }
 
 const MAX_TERM: usize = 200;
@@ -971,7 +953,14 @@ async fn add_glossary_term(
     }
     let term = form.term.trim().to_string();
     let translation = form.translation.trim().to_string();
-    let auto = form.auto.as_deref() != Some("") && form.auto.is_some();
+    // Mistraduction : la traduction erronée que LibreTranslate produit
+    // habituellement pour ce terme — utile pour retrouver l'entrée sans
+    // repartir du mot dans la langue d'origine.
+    let mistranslation = form
+        .mistranslation
+        .as_deref()
+        .map(|m| m.trim().to_string())
+        .filter(|m| !m.is_empty() && m.len() <= MAX_TRANSLATION);
     if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
         return (StatusCode::BAD_REQUEST, "terme ou traduction invalide").into_response();
     }
@@ -987,26 +976,26 @@ async fn add_glossary_term(
     .await
     .unwrap_or(None);
     let res = if let Some(id) = existing {
-        sqlx::query("UPDATE glossary SET translation = ?, auto = ? WHERE id = ?")
+        sqlx::query("UPDATE glossary SET translation = ?, mistranslation = ? WHERE id = ?")
             .bind(&translation)
-            .bind(auto as i64)
+            .bind(&mistranslation)
             .bind(id)
             .execute(&state.db)
             .await
             .map(|_| id)
     } else {
-        sqlx::query("INSERT INTO glossary (project_id, term, translation, auto) VALUES (?, ?, ?, ?)")
+        sqlx::query("INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)")
             .bind(project_id)
             .bind(&term)
             .bind(&translation)
-            .bind(auto as i64)
+            .bind(&mistranslation)
             .execute(&state.db)
             .await
             .map(|r| r.last_insert_rowid() as i64)
     };
     match res {
         Ok(id) => {
-            axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "auto": auto})).into_response()
+            axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "mistranslation": mistranslation})).into_response()
         }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "insertion impossible").into_response(),
     }
@@ -1087,19 +1076,21 @@ async fn export_glossary_csv(
     if load_project(&state, user.0, project_id).await.is_err() {
         return StatusCode::NOT_FOUND.into_response();
     }
-    let entries: Vec<(String, String)> = sqlx::query_as(
-        "SELECT term, translation FROM glossary WHERE project_id = ? ORDER BY term",
+    let entries: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
     )
     .bind(project_id)
     .fetch_all(&state.db)
     .await
     .unwrap_or_default();
     // BOM UTF-8 pour qu'Excel ouvre correctement les accents.
-    let mut csv = String::from("\u{feff}terme;traduction\r\n");
-    for (term, tr) in entries {
+    let mut csv = String::from("\u{feff}terme;traduction;mistraduction\r\n");
+    for (term, tr, mis) in entries {
         csv.push_str(&csv_field(&term));
         csv.push(';');
         csv.push_str(&csv_field(&tr));
+        csv.push(';');
+        csv.push_str(&csv_field(mis.as_deref().unwrap_or("")));
         csv.push_str("\r\n");
     }
     (
@@ -1368,50 +1359,6 @@ fn sanitize_shortcut(s: &str) -> String {
 
 // ---------- traduction (LibreTranslate) ----------
 
-/// Remplacement insensible à la casse qui préserve la majuscule initiale du
-/// terme trouvé (ex. « accountability » → « responsable », « Accountability »
-/// → « Responsable »). Recherche caractère par caractère (offsets Unicode sûrs).
-/// Respecte les frontières de mots : « translate » ne remplace pas à l'intérieur
-/// de « Libretranslate ».
-fn replace_ci(hay: &str, needle: &str, rep: &str) -> String {
-    if needle.is_empty() {
-        return hay.to_string();
-    }
-    let hay_chars: Vec<char> = hay.chars().collect();
-    let needle_lc: Vec<char> = needle.to_lowercase().chars().collect();
-    let n = needle_lc.len();
-    let is_word = |c: char| c.is_alphanumeric() || c == '\'' || c == '-';
-    let mut out = String::with_capacity(hay.len());
-    let mut i = 0;
-    while i < hay_chars.len() {
-        if i + n <= hay_chars.len() {
-            let before_ok = i == 0 || !is_word(hay_chars[i - 1]);
-            let after_ok = i + n == hay_chars.len() || !is_word(hay_chars[i + n]);
-            let matches = before_ok
-                && after_ok
-                && needle_lc.iter().zip(&hay_chars[i..i + n]).all(|(nc, hc)| {
-                    hc.to_lowercase().next().map(|c| c == *nc).unwrap_or(false)
-                });
-            if matches {
-                if hay_chars[i].is_uppercase() {
-                    let mut it = rep.chars();
-                    if let Some(c) = it.next() {
-                        out.extend(c.to_uppercase());
-                        out.extend(it);
-                    }
-                } else {
-                    out.push_str(rep);
-                }
-                i += n;
-                continue;
-            }
-        }
-        out.push(hay_chars[i]);
-        i += 1;
-    }
-    out
-}
-
 #[derive(Deserialize)]
 struct TranslateForm {
     text: String,
@@ -1456,25 +1403,8 @@ async fn translate_text(
             target = tg;
         }
     }
-    // Glossaire du projet : les termes sont remplacés dans le texte source
-    // AVANT l'envoi à LibreTranslate (sinon LT traduit déjà « accountability »
-    // en « responsabilité » et le remplacement post-traduction ne matche
-    // jamais), puis à nouveau après traduction pour les termes résiduels.
-    let mut text = form.text.clone();
-    let entries: Vec<(String, String)> = if let Some(pid) = form.project_id {
-        sqlx::query_as("SELECT term, translation FROM glossary WHERE project_id = ? AND auto = 1")
-            .bind(pid)
-            .fetch_all(&state.db)
-            .await
-            .unwrap_or_default()
-    } else {
-        Vec::new()
-    };
-    for (term, tr) in &entries {
-        text = replace_ci(&text, term, tr);
-    }
     let body = serde_json::json!({
-        "q": text,
+        "q": form.text,
         "source": source,
         "target": target,
         "format": "text",
@@ -1489,16 +1419,11 @@ async fn translate_text(
     .await;
     match res {
         Ok(Ok(v)) if v.get("translatedText").is_some() => {
-            let mut translated = v
+            let translated = v
                 .get("translatedText")
                 .and_then(|t| t.as_str())
                 .unwrap_or_default()
                 .to_string();
-            // Glossaire du projet (chargé avant l'appel réseau) : cohérence
-            // des termes récurrents (ex. Accountability → Responsable).
-            for (term, tr) in &entries {
-                translated = replace_ci(&translated, term, tr);
-            }
             if translated.is_empty() {
                 (StatusCode::BAD_GATEWAY, "réponse du serveur de traduction invalide").into_response()
             } else {

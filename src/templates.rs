@@ -73,7 +73,7 @@ pub struct GlossaryRow {
     pub id: i64,
     pub term: String,
     pub translation: String,
-    pub auto: bool,
+    pub mistranslation: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]
