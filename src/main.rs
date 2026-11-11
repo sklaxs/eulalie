@@ -975,21 +975,37 @@ async fn add_glossary_term(
     if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
         return (StatusCode::BAD_REQUEST, "terme ou traduction invalide").into_response();
     }
-    // Upsert : un doublon met à jour la traduction (le contrôle côté client
-    // affiche un avertissement, sans interdire).
-    let res = sqlx::query(
-        "INSERT INTO glossary (project_id, term, translation, auto) VALUES (?, ?, ?, ?)
-         ON CONFLICT(project_id, term) DO UPDATE SET translation = excluded.translation, auto = excluded.auto",
+    // Upsert insensible à la casse (COLLATE NOCASE) : « Accountability » et
+    // « accountability » désignent le même terme — on met à jour la ligne
+    // existante plutôt que d'en créer une seconde.
+    let existing: Option<i64> = sqlx::query_scalar(
+        "SELECT id FROM glossary WHERE project_id = ? AND term = ? COLLATE NOCASE",
     )
     .bind(project_id)
     .bind(&term)
-    .bind(&translation)
-    .bind(auto as i64)
-    .execute(&state.db)
-    .await;
+    .fetch_optional(&state.db)
+    .await
+    .unwrap_or(None);
+    let res = if let Some(id) = existing {
+        sqlx::query("UPDATE glossary SET translation = ?, auto = ? WHERE id = ?")
+            .bind(&translation)
+            .bind(auto as i64)
+            .bind(id)
+            .execute(&state.db)
+            .await
+            .map(|_| id)
+    } else {
+        sqlx::query("INSERT INTO glossary (project_id, term, translation, auto) VALUES (?, ?, ?, ?)")
+            .bind(project_id)
+            .bind(&term)
+            .bind(&translation)
+            .bind(auto as i64)
+            .execute(&state.db)
+            .await
+            .map(|r| r.last_insert_rowid() as i64)
+    };
     match res {
-        Ok(r) => {
-            let id: i64 = r.last_insert_rowid() as i64;
+        Ok(id) => {
             axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "auto": auto})).into_response()
         }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "insertion impossible").into_response(),
