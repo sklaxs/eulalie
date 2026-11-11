@@ -1,3 +1,7 @@
+// Champs « non lus » selon clippy mais utilisés par les templates Askama
+// (le moteur lit les champs via du code généré que clippy ne voit pas).
+#![allow(dead_code)]
+
 use askama::Template;
 
 // base.html n'est pas utilisé comme layout Askama (chaque page est autonome)
