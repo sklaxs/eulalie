@@ -520,7 +520,7 @@ async fn load_project(
     state: &SharedState,
     user_id: i64,
     project_id: i64,
-) -> Result<ProjectMeta, Response> {
+) -> Result<ProjectMeta, Box<Response>> {
     let meta: Option<ProjectMeta> = sqlx::query_as(
         "SELECT id, title, source_kind, source_title, source_lang, target_lang FROM projects WHERE id = ? AND user_id = ?",
     )
@@ -529,7 +529,7 @@ async fn load_project(
     .fetch_optional(&state.db)
     .await
     .unwrap_or(None);
-    meta.ok_or(StatusCode::NOT_FOUND.into_response())
+    meta.ok_or_else(|| Box::new(StatusCode::NOT_FOUND.into_response()))
 }
 
 use axum::response::Response;
@@ -1047,7 +1047,7 @@ async fn add_glossary_term(
             .bind(&mistranslation)
             .execute(&state.db)
             .await
-            .map(|r| r.last_insert_rowid() as i64)
+            .map(|r| r.last_insert_rowid())
     };
     match res {
         Ok(id) => {

@@ -73,6 +73,10 @@ fn extract_epub(path: &Path) -> Result<Extracted> {
         });
     let mut chapters = Vec::new();
     let mut guard = 0;
+    // Boucle volontairement en forme `loop` : deux conditions de sortie
+    // (fin du document, garde-fou de 5000 chapitres) rendent le `while let`
+    // moins lisible.
+    #[allow(clippy::while_let_loop)]
     loop {
         if let Some((html, _mime)) = doc.get_current_str() {
             let title_ch = extract_html_title(&html)
