@@ -1020,35 +1020,18 @@ async fn add_glossary_term(
     if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
         return (StatusCode::BAD_REQUEST, "terme ou traduction invalide").into_response();
     }
-    // Upsert insensible à la casse (COLLATE NOCASE) : « Accountability » et
-    // « accountability » désignent le même terme — on met à jour la ligne
-    // existante plutôt que d'en créer une seconde.
-    let existing: Option<i64> = sqlx::query_scalar(
-        "SELECT id FROM glossary WHERE project_id = ? AND term = ? COLLATE NOCASE",
+    // Les doublons de termes sont autorisés (synonymes) : le contrôle côté
+    // client affiche un simple avertissement, chaque ajout crée sa ligne.
+    let res = sqlx::query(
+        "INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)",
     )
     .bind(project_id)
     .bind(&term)
-    .fetch_optional(&state.db)
+    .bind(&translation)
+    .bind(&mistranslation)
+    .execute(&state.db)
     .await
-    .unwrap_or(None);
-    let res = if let Some(id) = existing {
-        sqlx::query("UPDATE glossary SET translation = ?, mistranslation = ? WHERE id = ?")
-            .bind(&translation)
-            .bind(&mistranslation)
-            .bind(id)
-            .execute(&state.db)
-            .await
-            .map(|_| id)
-    } else {
-        sqlx::query("INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)")
-            .bind(project_id)
-            .bind(&term)
-            .bind(&translation)
-            .bind(&mistranslation)
-            .execute(&state.db)
-            .await
-            .map(|r| r.last_insert_rowid())
-    };
+    .map(|r| r.last_insert_rowid());
     match res {
         Ok(id) => {
             axum::Json(serde_json::json!({"id": id, "term": term, "translation": translation, "mistranslation": mistranslation})).into_response()

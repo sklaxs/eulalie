@@ -95,7 +95,9 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 .gloss-table .trans{color:var(--accent2)}
 .gloss-table .mis{color:#ffb454;font-size:12px}
 .gloss-table .mis.empty{color:var(--muted);opacity:.4}
-.gloss-table .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px;width:30px}
+.gloss-table td.del{max-width:none;overflow:visible;width:38px;padding-left:12px;padding-right:10px;text-align:right}
+.gloss-table td.mis{padding-right:16px}
+.gloss-table .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
 .gloss-table .del:hover{opacity:1}
 /* volet Notes latéral (gauche ou droite selon les paramètres) */
 /* volets latéraux (notes, glossaire, paramètres) : comportement unifié */
@@ -232,7 +234,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
 <input type="text" name="mistranslation" id="glossMis" placeholder="Mistraduction récurrente (optionnel — ex. ce que LibreTranslate produit)" maxlength="2000">
 <button class="btn-sm primary" type="submit" id="glossAddBtn" style="margin-left:auto">Ajouter</button>
-<span id="glossDupWarn">⚠ Ce terme existe déjà — la traduction sera mise à jour.</span>
+<span id="glossDupWarn">⚠ Ce terme existe déjà — un doublon sera créé (synonyme autorisé).</span>
 </form>
 {% if glossary.is_empty() %}
 <p class="empty-note" id="glossEmptyNote">Aucun terme pour l'instant — ajoutez vos références de traduction ci-dessus.</p>
