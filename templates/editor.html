@@ -12,8 +12,13 @@ body{margin:0;font:15px/1.6 -apple-system,'Segoe UI',Roboto,Inter,sans-serif;bac
 header.top{display:flex;justify-content:space-between;align-items:center;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--bg2);gap:14px}
 .brand{font-weight:700;color:var(--accent);white-space:nowrap}
 .proj-title{font-weight:600}
-nav a{color:var(--muted);font-size:14px;margin-left:14px}
+nav a{color:var(--muted);font-size:14px}
 nav a:hover{color:var(--accent2)}
+/* en-tête : icônes uniformément espacées et alignées */
+#topnav{display:flex;gap:14px;align-items:center}
+#topnav>*{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:0;margin:0;color:var(--muted);border:none;background:none;cursor:pointer;text-decoration:none;flex:0 0 auto}
+#topnav>*:hover{color:var(--accent2)}
+#topnav svg{display:block}
 .layout{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;min-height:0}
 .pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);position:relative}
 .pane:last-child{border-right:none}
@@ -137,13 +142,13 @@ header.top{flex-wrap:wrap;gap:8px}
 </select>
 <button class="btn-sm" type="submit">↻</button>
 </form>
-<nav style="display:flex;gap:12px;align-items:center">
+<nav id="topnav">
 <button class="navbtn-icon" id="glossBtn" title="Glossaire du livre ({{ shortcut_glossary }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
 <button class="navbtn-icon" id="notesBtn" title="Notes de traduction ({{ shortcut_notes }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
-<a href="/projects/{{ project.id }}/export.md" title="Exporter en Markdown" style="display:inline-flex" download><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
-<a href="/settings" title="Paramètres" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></a>
-<a href="/" title="Projets" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /> </svg></a>
-<a href="#" title="Déconnexion" onclick="event.preventDefault();document.getElementById('logoutForm').submit()" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M13 12v.01" /> <path d="M3 21h18" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5" /> <path d="M14 7h7m-3 -3l3 3l-3 3" /> </svg></a>
+<a href="/projects/{{ project.id }}/export.md" title="Exporter en Markdown" download><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
+<a href="/settings" title="Paramètres"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></a>
+<a href="/" title="Projets"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /> </svg></a>
+<a href="#" title="Déconnexion" onclick="event.preventDefault();document.getElementById('logoutForm').submit()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M13 12v.01" /> <path d="M3 21h18" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5" /> <path d="M14 7h7m-3 -3l3 3l-3 3" /> </svg></a>
 <form id="logoutForm" method="post" action="/logout" style="display:none"></form>
 </nav>
 </header>
@@ -183,14 +188,14 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="toast" class="toast"></div>
 <div class="modal-bg" id="glossModal">
 <div class="modal">
-<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><div style="display:flex;gap:8px"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)">⬇ CSV</a><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div></div>
+<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><div style="display:flex;gap:8px"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div></div>
 <div class="modal-body">
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Ils sont appliqués automatiquement aux traductions ; cliquez une traduction pour l'insérer au curseur.</p>
 <form class="gloss-form" id="glossForm">
 <input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
 <input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
-<label class="gloss-auto"><input type="checkbox" name="auto" id="glossAuto" checked> Appliquer aux traductions automatiques</label>
-<button class="btn-sm" type="submit" id="glossAddBtn">Ajouter</button>
+<label class="gloss-auto"><input type="checkbox" name="auto" id="glossAuto" checked> Forcer la traduction</label>
+<button class="btn-sm primary" type="submit" id="glossAddBtn" style="margin-left:auto">Ajouter</button>
 </form>
 {% if glossary.is_empty() %}
 <p class="empty-note" id="glossEmptyNote">Aucun terme pour l'instant — ajoutez vos références de traduction ci-dessus.</p>
@@ -198,7 +203,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="gloss-list" id="glossList">
 {% for g in glossary %}
 <div class="gloss-row" data-id="{{ g.id }}" data-term="{{ g.term }}" data-trans="{{ g.translation }}" title="Cliquer pour insérer la traduction au curseur">
-<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><label class="autolbl" title="Appliquer aux traductions automatiques"><input type="checkbox" class="auto-ck" {% if g.auto %}checked{% endif %}> auto</label><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
+<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span><label class="autolbl" title="Forcer la traduction (appliquer aux traductions automatiques)"><input type="checkbox" class="auto-ck" {% if g.auto %}checked{% endif %}> forcer</label><span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
 </div>
 {% endfor %}
 </div>
@@ -207,11 +212,16 @@ header.top{flex-wrap:wrap;gap:8px}
 </div>
 <aside id="notesPanel" class="side-{{ notes_side }}">
 <div class="panel-head">
-<h3>📝 Notes — {{ project.title }}</h3>
+<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg> Notes — {{ project.title }}</h3>
+<div style="display:flex;gap:8px">
+<button class="btn-sm" id="notesPreviewBtn" title="Aperçu Markdown des notes">👁 Aperçu</button>
+<a class="btn-sm" id="notesExportBtn" href="#" title="Exporter la note en Markdown (.md)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
 <button class="btn-sm" onclick="toggleNotes(false)" title="Masquer le volet">✕</button>
 </div>
+</div>
 <div class="panel-body">
-<textarea id="notesArea" placeholder="Notes de traduction, remarques, choix éditoriaux…">{{ notes }}</textarea>
+<textarea id="notesArea" placeholder="Notes de traduction, remarques, choix éditoriaux… (Markdown pris en charge)">{{ notes }}</textarea>
+<div id="notesPreview" style="display:none;font-size:14px;line-height:1.7;white-space:pre-wrap"></div>
 <div id="notesStatus" style="color:var(--muted);font-size:12px;margin-top:6px;min-height:16px"></div>
 </div>
 </aside>
@@ -438,7 +448,7 @@ const row=document.createElement('div');
 row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
 row.title="Cliquer pour insérer la traduction au curseur";
 row.dataset.term=g.term;
-row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><label class="autolbl" title="Appliquer aux traductions automatiques"><input type="checkbox" class="auto-ck"'+(g.auto?' checked':'')+'> auto</label><span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span><label class="autolbl" title="Forcer la traduction (appliquer aux traductions automatiques)"><input type="checkbox" class="auto-ck"'+(g.auto?' checked':'')+'> forcer</label><span class="del" title="Supprimer">\ud83d\uddd1</span>';
 row.querySelector('.term').textContent=g.term;
 row.querySelector('.trans').textContent=g.translation;
 row.onclick=()=>insert(g.translation);
@@ -503,6 +513,31 @@ fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':
 .catch(()=>notesStatus.textContent="Échec de l'enregistrement.");
 },1000);
 });
+// Aperçu Markdown des notes (rendu par le serveur, comme l'aperçu des chapitres).
+let notesPreviewOn=false;
+document.getElementById('notesPreviewBtn').onclick=()=>{
+notesPreviewOn=!notesPreviewOn;
+const btn=document.getElementById('notesPreviewBtn');
+if(notesPreviewOn){
+fetch('/projects/{{ project.id }}/chapter/{{ current_idx }}/preview',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'markdown='+encodeURIComponent(notesArea.value)})
+.then(r=>{if(!r.ok)throw 0;return r.text()})
+.then(h=>{document.getElementById('notesPreview').innerHTML=h;notesArea.style.display='none';document.getElementById('notesPreview').style.display='block';btn.textContent='✎ Rédaction';})
+.catch(()=>{notesPreviewOn=false;showToast('Aperçu indisponible.');});
+}else{notesArea.style.display='block';document.getElementById('notesPreview').style.display='none';btn.textContent='👁 Aperçu';notesArea.focus();}
+};
+// Export de la note en fichier .md (sauvegarde préalable).
+document.getElementById('notesExportBtn').onclick=e=>{
+e.preventDefault();
+const save=fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'notes='+encodeURIComponent(notesArea.value)});
+Promise.resolve(save).then(()=>{
+const blob=new Blob([notesArea.value],{type:'text/markdown;charset=utf-8'});
+const a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+a.download='notes-{{ project.id }}.md';
+document.body.appendChild(a);a.click();a.remove();
+setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+});
+};
 
 // Synchronisation du défilement entre le panneau source et l'éditeur.
 const syncBtn=document.getElementById('syncBtn');
