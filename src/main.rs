@@ -134,7 +134,7 @@ async fn healthz() -> &'static str {
 async fn favicon_svg() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "image/svg+xml"),
-         (header::CACHE_CONTROL, "public, max-age=86400"),],
+         (header::CACHE_CONTROL, "public, max-age=3600"),],
         include_str!("../static/favicon.svg"),
     )
 }
