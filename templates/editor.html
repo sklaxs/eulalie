@@ -94,20 +94,23 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 .gloss-row .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
 .gloss-row .del:hover{opacity:1}
 /* volet Notes latéral (gauche ou droite selon les paramètres) */
-#notesPanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
-#notesPanel.side-left{left:0;border-right:1px solid var(--border);transform:translateX(-100%)}
-#notesPanel.side-right{right:0;border-left:1px solid var(--border);transform:translateX(100%)}
-#notesPanel.open.side-left,#notesPanel.open.side-right{transform:translateX(0)}
-#notesPanel .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px}
-#notesPanel .panel-head h3{margin:0;font-size:15px}
-#notesPanel .panel-body{flex:1;overflow:auto;padding:14px 16px}
+/* volets latéraux (notes, glossaire) : comportement unifié */
+.sidepanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
+.sidepanel.side-left{left:0;border-right:1px solid var(--border);transform:translateX(-100%)}
+.sidepanel.side-right{right:0;border-left:1px solid var(--border);transform:translateX(100%)}
+.sidepanel.open.side-left,.sidepanel.open.side-right{transform:translateX(0)}
+.sidepanel .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px}
+.sidepanel .panel-head h3{margin:0;font-size:15px}
+.sidepanel .panel-body{flex:1;overflow:auto;padding:14px 16px}
 #notesArea{width:100%;min-height:calc(100% - 24px);background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:12px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
 #notesArea:focus{outline:none;border-color:var(--accent)}
-#notesToggle{position:fixed;top:50%;transform:translateY(-50%);z-index:46;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:10px 4px;font-size:13px;cursor:pointer;display:none}
-#notesToggle:hover{color:var(--accent2);border-color:var(--accent)}
-#notesToggle.show{display:block}
-#notesToggle.side-left{left:0;border-radius:0 8px 8px 0}
-#notesToggle.side-right{right:0;border-radius:8px 0 0 8px}
+.sidetab{position:fixed;top:50%;transform:translateY(-50%);z-index:46;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:10px 4px;font-size:13px;cursor:pointer;display:none}
+.sidetab:hover{color:var(--accent2);border-color:var(--accent)}
+.sidetab.show{display:block}
+.sidetab.side-left{left:0;border-radius:0 8px 8px 0}
+.sidetab.side-right{right:0;border-radius:8px 0 0 8px}
+#glossToggle{top:62%}
+#glossPanel{width:440px}
 .note-form textarea{width:100%;min-height:70px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:10px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
 .note-form textarea:focus{outline:none;border-color:var(--accent)}
 .note-form select{margin-top:8px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px;font-size:13px}
@@ -192,10 +195,9 @@ header.top{flex-wrap:wrap;gap:8px}
 </section>
 </div>
 <div id="toast" class="toast"></div>
-<div class="modal-bg" id="glossModal">
-<div class="modal">
-<div class="modal-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center"><button class="btn-sm" onclick="closeGlossModal()" title="Fermer">✕</button><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a></div></div>
-<div class="modal-body">
+<aside id="glossPanel" class="sidepanel side-{{ notes_side }}">
+<div class="panel-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a><button class="btn-sm" onclick="toggleGloss(false)" title="Masquer le volet">✕</button></div></div>
+<div class="panel-body">
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Cliquez une ligne pour insérer la traduction au curseur.</p>
 <input type="text" id="glossSearch" placeholder="🔍 Rechercher : terme, traduction ou mistraduction…">
 <form class="gloss-form" id="glossForm">
@@ -216,9 +218,9 @@ header.top{flex-wrap:wrap;gap:8px}
 {% endfor %}
 </div>
 </div>
-</div>
-</div>
-<aside id="notesPanel" class="side-{{ notes_side }}">
+</aside>
+<button id="glossToggle" class="sidetab side-{{ notes_side }} show" title="Afficher le glossaire ({{ shortcut_glossary }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
+<aside id="notesPanel" class="sidepanel side-{{ notes_side }}">
 <div class="panel-head">
 <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg> Note</h3>
 <div style="display:flex;gap:8px">
@@ -233,7 +235,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="notesStatus" style="color:var(--muted);font-size:12px;margin-top:6px;min-height:16px"></div>
 </div>
 </aside>
-<button id="notesToggle" class="side-{{ notes_side }} show" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
+<button id="notesToggle" class="sidetab side-{{ notes_side }} show" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -418,25 +420,29 @@ fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-for
 showToast('Échec de la traduction — '+e.message+'. Vérifiez le serveur LibreTranslate dans Paramètres (ex. http://libretranslate:5000) et que le conteneur est démarré.');});
 };
 
-// Glossaire du livre — pré-rempli avec la sélection source (terme),
-// et la sélection de l'éditeur (traduction) le cas échéant.
-const glossBtn=document.getElementById('glossBtn');
-function openGlossModal(){
-const termInput=document.getElementById('glossTerm');
-const transInput=document.getElementById('glossTrans');
+// Glossaire du livre — volet latéral (harmonisé avec le volet Notes).
 // Pré-remplissage : sélection du panneau source → terme ;
 // sélection de l'éditeur (traduction) → traduction.
+const glossPanel=document.getElementById('glossPanel');
+const glossToggle=document.getElementById('glossToggle');
+const glossBtn=document.getElementById('glossBtn');
+function prefillGloss(){
+const termInput=document.getElementById('glossTerm');
+const transInput=document.getElementById('glossTrans');
 if(!termInput.value)termInput.value=selText.slice(0,200);
 if(!transInput.value){
 const es=editor.value.slice(editor.selectionStart,editor.selectionEnd).trim();
 if(es)transInput.value=es.slice(0,2000);
 }
-document.getElementById('glossModal').classList.add('show');
-if(termInput.value&&!transInput.value)transInput.focus();else termInput.focus();
 }
-glossBtn.onclick=openGlossModal;
-function closeGlossModal(){document.getElementById('glossModal').classList.remove('show');}
-document.getElementById('glossModal').addEventListener('click',e=>{if(e.target.id==='glossModal')closeGlossModal();});
+function toggleGloss(open){
+if(open===undefined)open=!glossPanel.classList.contains('open');
+glossPanel.classList.toggle('open',open);
+glossToggle.classList.toggle('show',!open);
+if(open){prefillGloss();document.getElementById('glossTerm').focus();}
+}
+glossBtn.onclick=()=>toggleGloss(true);
+glossToggle.onclick=()=>toggleGloss(true);
 document.getElementById('glossForm').addEventListener('submit',e=>{
 e.preventDefault();
 const term=document.getElementById('glossTerm').value;
@@ -501,18 +507,16 @@ function toggleNotes(open){
 if(open===undefined)open=!notesPanel.classList.contains('open');
 notesPanel.classList.toggle('open',open);
 notesToggle.classList.toggle('show',!open);
-// Le bouton Traduire vertical ne doit pas rester masqué derrière le volet gauche.
-if(open&&notesPanel.classList.contains('side-left')&&translateBtn.style.display==='block'){resetTranslateBtn();selText='';}
 if(open)document.getElementById('notesArea').focus();
 }
 notesBtn.onclick=()=>toggleNotes(true);
 notesToggle.onclick=()=>toggleNotes(true);
-// Fermeture au clic extérieur (option des Paramètres) : on peut garder le volet
-// ouvert pour consulter le texte pendant la prise de notes.
+// Fermeture au clic extérieur (option des Paramètres) : s'applique à tous
+// les volets — on peut les garder ouverts pour consulter le texte.
 document.addEventListener('click',e=>{
-if(!notesPanel.classList.contains('open')||!NOTES_CLOSE_OUTSIDE)return;
-if(notesPanel.contains(e.target)||notesToggle.contains(e.target)||notesBtn.contains(e.target))return;
-toggleNotes(false);
+if(!NOTES_CLOSE_OUTSIDE)return;
+if(notesPanel.classList.contains('open')&&!notesPanel.contains(e.target)&&!notesToggle.contains(e.target)&&!notesBtn.contains(e.target))toggleNotes(false);
+if(glossPanel.classList.contains('open')&&!glossPanel.contains(e.target)&&!glossToggle.contains(e.target)&&!glossBtn.contains(e.target))toggleGloss(false);
 });
 // Sauvegarde automatique 1 s après la saisie.
 const notesArea=document.getElementById('notesArea');
@@ -598,7 +602,7 @@ if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();
 // Le raccourci d'aperçu pilote le volet Notes quand il est ouvert.
 if(notesPanel.classList.contains('open')){document.getElementById('notesPreviewBtn').click();}else{togglePreview();}}
 if(matchShortcut(e,SC_TRANSLATE)&&selText){e.preventDefault();translateBtn.click();}
-if(matchShortcut(e,SC_GLOSS)){e.preventDefault();openGlossModal();}
+if(matchShortcut(e,SC_GLOSS)){e.preventDefault();toggleGloss();}
 if(matchShortcut(e,SC_NOTES)){e.preventDefault();toggleNotes();}
 });
 
