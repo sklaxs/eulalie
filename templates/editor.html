@@ -15,7 +15,7 @@ header.top{display:flex;justify-content:space-between;align-items:center;padding
 nav a{color:var(--muted);font-size:14px;margin-left:14px}
 nav a:hover{color:var(--accent2)}
 .layout{display:grid;grid-template-columns:1fr 1fr;gap:0;flex:1;min-height:0}
-.pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border)}
+.pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border);position:relative}
 .pane:last-child{border-right:none}
 .pane-head{display:flex;justify-content:space-between;align-items:center;padding:0 16px;border-bottom:1px solid var(--border);background:var(--bg2);gap:8px;height:42px;box-sizing:border-box}
 .pane-head h2{margin:0;font-size:14px;color:var(--muted);font-weight:600}
@@ -44,11 +44,10 @@ textarea#editor:focus{outline:none}
 .counter{color:var(--muted);font-size:13px}
 .saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
 .saved.show{opacity:1}
-/* barre Traduire : pleine largeur du panneau source (≈ 0,4 cm de haut) */
-#translateBtn{display:none;width:100%;min-height:0.4cm;border:none;border-top:1px solid var(--border);background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;padding:4px 10px;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* bouton Traduire vertical : pleine hauteur du bord gauche du panneau source */
+#translateBtn{display:none;position:absolute;left:0;top:0;bottom:0;width:0.4cm;border:none;border-right:1px solid var(--border);background:linear-gradient(180deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;writing-mode:vertical-rl;padding:10px 0;box-sizing:border-box;white-space:nowrap;overflow:hidden;z-index:5}
 #translateBtn:hover{filter:brightness(1.15)}
 #translateBtn:disabled{opacity:.6;cursor:wait}
-#translateBtn .sel{color:rgba(255,255,255,.75);font-weight:400;font-size:12px}
 /* modal images */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:60;align-items:center;justify-content:center}
 .modal-bg.show{display:flex}
@@ -79,9 +78,28 @@ textarea#editor:focus{outline:none}
 .gloss-row .trans{flex:1;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .gloss-row .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
 .gloss-row .del:hover{opacity:1}
-#notesArea{width:100%;min-height:300px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:12px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
-#notesArea:focus{outline:none;border-color:var(--accent)}
-.notes-status{color:var(--muted);font-size:12px;margin-top:6px;min-height:16px}
+/* volet Notes latéral (gauche ou droite selon les paramètres) */
+#notesPanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
+#notesPanel.side-left{left:0;border-right:1px solid var(--border);transform:translateX(-100%)}
+#notesPanel.side-right{right:0;border-left:1px solid var(--border);transform:translateX(100%)}
+#notesPanel.open.side-left,#notesPanel.open.side-right{transform:translateX(0)}
+#notesPanel .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px}
+#notesPanel .panel-head h3{margin:0;font-size:15px}
+#notesPanel .panel-body{flex:1;overflow:auto;padding:14px 16px}
+#notesToggle{position:fixed;top:50%;transform:translateY(-50%);z-index:46;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:10px 4px;font-size:13px;cursor:pointer;display:none}
+#notesToggle:hover{color:var(--accent2);border-color:var(--accent)}
+#notesToggle.show{display:block}
+#notesToggle.side-left{left:0;border-radius:0 8px 8px 0}
+#notesToggle.side-right{right:0;border-radius:8px 0 0 8px}
+.note-form textarea{width:100%;min-height:70px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:10px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
+.note-form textarea:focus{outline:none;border-color:var(--accent)}
+.note-form select{margin-top:8px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px;font-size:13px}
+.note-row{border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-top:10px;background:var(--bg3);font-size:14px;position:relative}
+.note-row .ch{display:inline-block;font-size:11px;color:var(--accent2);border:1px solid var(--border);border-radius:6px;padding:1px 8px;margin-bottom:6px}
+.note-row .del{position:absolute;top:6px;right:8px;color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
+.note-row .del:hover{opacity:1}
+#notesStatus{color:var(--muted);font-size:12px;min-height:16px;margin-top:6px}
+.sync-on{border-color:var(--accent)!important}
 
 /* ── Responsive ── */
 @media (max-width: 900px){
@@ -114,6 +132,8 @@ header.top{flex-wrap:wrap;gap:8px}
 <button class="btn-sm" type="submit">↻</button>
 </form>
 <nav style="display:flex;gap:12px;align-items:center">
+<button class="navbtn-icon" id="glossBtn" title="Glossaire du livre ({{ shortcut_glossary }})" style="background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
+<button class="navbtn-icon" id="notesBtn" title="Notes de traduction ({{ shortcut_notes }})" style="background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <a href="/projects/{{ project.id }}/export.md" title="Exporter en Markdown" style="display:inline-flex" download><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
 <a href="/settings" title="Paramètres" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></a>
 <a href="/" title="Projets" style="display:inline-flex"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /> </svg></a>
@@ -126,8 +146,6 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="pane-head">
 <h2>{{ current.title }}</h2>
 <div class="navbtns">
-<button class="btn-sm" id="glossBtn" title="Glossaire du livre (termes / phrases de référence)">📔</button>
-<button class="btn-sm" id="notesBtn" title="Notes de traduction">📝</button>
 {% match prev_idx %}{% when Some with (p) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ p }}" title="Chapitre précédent"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M14 6l-6 6l6 6v-12" /> </svg></a>{% when None %}{% endmatch %}<span class="counter">{{ current_idx + 1 }} / {{ chapters.len() }}</span>{% match next_idx %}{% when Some with (n) %}<a class="btn-sm" href="/projects/{{ project.id }}/chapter/{{ n }}" title="Chapitre suivant"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 18l6 -6l-6 -6v12" /> </svg></a>{% when None %}{% endmatch %}
 </div>
 </div>
@@ -148,6 +166,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <button id="imgBtn" title="Images"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M15 8h.01" /> <path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12" /> <path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5" /> <path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3" /> </svg></button>
 <button onclick="insert('[texte](https://)')" title="Insérer un lien"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M9 15l6 -6" /> <path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464" /> <path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463" /> </svg></button>
 <span style="flex:1"></span>
+<button id="syncBtn" title="Synchroniser le défilement des deux panneaux">🔗 Synchro</button>
 <button id="togglePreview">👁 Aperçu</button>
 {% if !autosave %}<button id="saveBtn" onclick="saveNow()">💾 Sauvegarder</button>{% endif %}
 </div>
@@ -158,7 +177,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="toast" class="toast"></div>
 <div class="modal-bg" id="glossModal">
 <div class="modal">
-<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div>
+<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><div style="display:flex;gap:8px"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)">⬇ CSV</a><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div></div>
 <div class="modal-body">
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Ils sont appliqués automatiquement aux traductions ; cliquez une traduction pour l'insérer au curseur.</p>
 <form class="gloss-form" id="glossForm">
@@ -179,15 +198,35 @@ header.top{flex-wrap:wrap;gap:8px}
 </div>
 </div>
 </div>
-<div class="modal-bg" id="notesModal">
-<div class="modal">
-<div class="modal-head"><h3>📝 Notes — {{ project.title }}</h3><button class="btn-sm" onclick="closeNotesModal()">Fermer</button></div>
-<div class="modal-body">
-<textarea id="notesArea" placeholder="Notes de traduction, remarques, choix éditoriaux…">{{ notes }}</textarea>
-<div class="notes-status" id="notesStatus"></div>
+<aside id="notesPanel" class="side-{{ notes_side }}">
+<div class="panel-head">
+<h3>📝 Notes — {{ project.title }}</h3>
+<button class="btn-sm" onclick="toggleNotes(false)" title="Masquer le volet">✕</button>
+</div>
+<div class="panel-body">
+<form class="note-form" id="noteForm">
+<textarea id="noteContent" placeholder="Note de traduction, remarque, choix éditorial…"></textarea>
+<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+<select id="noteChapter" title="Chapitre lié à la note">
+<option value="">— Sans lien de chapitre —</option>
+{% for c in chapters %}<option value="{{ c.idx }}" {% if c.idx == current.idx %}selected{% endif %}>Chap. {{ c.idx + 1 }} — {{ c.title }}</option>{% endfor %}
+</select>
+<button class="btn-sm primary" type="submit" id="noteAddBtn">Ajouter</button>
+</div>
+</form>
+<div id="notesStatus"></div>
+<div id="notesList">
+{% for n in notes %}
+<div class="note-row" data-id="{{ n.id }}">
+{% match n.chapter_idx %}{% when Some with (c) %}<span class="ch">Chap. {{ c + 1 }}</span><br>{% when None %}{% endmatch %}
+<span class="content">{{ n.content }}</span>
+<span class="del" title="Supprimer la note">🗑</span>
+</div>
+{% endfor %}
 </div>
 </div>
-</div>
+</aside>
+<button id="notesToggle" class="side-{{ notes_side }}" title="Afficher les notes ({{ shortcut_notes }})">›</button>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -220,6 +259,8 @@ const AUTOSAVE = {{ autosave }};
 const SC_PREV = "{{ shortcut_prev }}";
 const SC_NEXT = "{{ shortcut_next }}";
 const SC_PREVIEW = "{{ shortcut_preview }}";
+const SC_GLOSS = "{{ shortcut_glossary }}";
+const SC_NOTES = "{{ shortcut_notes }}";
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 const sourcePane = document.getElementById('source');
@@ -330,24 +371,24 @@ nameEl.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();nameEl.blur();}
 if(ev.key==='Escape'){nameEl.textContent=old;nameEl.contentEditable='false';}};
 }
 
-// Traduction : barre pleine largeur en bas du panneau source.
+// Traduction : bouton vertical pleine hauteur sur le bord gauche du panneau source.
 const translateBtn=document.getElementById('translateBtn');
+const MAX_SEL=50000;
 let selText='';
-function resetTranslateBtn(){translateBtn.innerHTML='🌍 Traduire la sélection';translateBtn.disabled=false;translateBtn.style.display='none';}
+function resetTranslateBtn(){translateBtn.textContent='🌍 Traduire';translateBtn.disabled=false;translateBtn.style.display='none';}
 document.addEventListener('selectionchange',()=>{
 if(translateBtn.disabled)return;
 const sel=window.getSelection();
 const t=sel?sel.toString().trim():'';
-if(t.length>1&&t.length<5000&&sourcePane.contains(sel.anchorNode)){
+if(t.length>1&&t.length<MAX_SEL&&sourcePane.contains(sel.anchorNode)){
 selText=t;
-const short=t.length>60?t.slice(0,57)+'…':t;
-translateBtn.innerHTML='🌍 Traduire <span class="sel">« '+short.replace(/</g,'&lt;')+' »</span>';
+translateBtn.textContent=t.length>40?'🌍 Traduire ('+t.length+' car.)':'🌍 Traduire « '+t+' »';
 translateBtn.style.display='block';
 }else{resetTranslateBtn();selText='';}
 });
 translateBtn.onclick=()=>{
 if(!selText)return;
-translateBtn.textContent='… traduction en cours';translateBtn.disabled=true;
+translateBtn.textContent='… traduction';translateBtn.disabled=true;
 fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)+'&project_id={{ project.id }}'})
 .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
 .then(txt=>{insert(txt+'\n');resetTranslateBtn();})
@@ -355,9 +396,23 @@ fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-for
 showToast('Échec de la traduction — '+e.message+'. Vérifiez le serveur LibreTranslate dans Paramètres (ex. http://libretranslate:5000) et que le conteneur est démarré.');});
 };
 
-// Glossaire du livre
+// Glossaire du livre — pré-rempli avec la sélection source (terme),
+// et la sélection de l'éditeur (traduction) le cas échéant.
 const glossBtn=document.getElementById('glossBtn');
-glossBtn.onclick=()=>document.getElementById('glossModal').classList.add('show');
+function openGlossModal(){
+const termInput=document.getElementById('glossTerm');
+const transInput=document.getElementById('glossTrans');
+// Pré-remplissage : sélection du panneau source → terme ;
+// sélection de l'éditeur (traduction) → traduction.
+if(!termInput.value)termInput.value=selText.slice(0,200);
+if(!transInput.value){
+const es=editor.value.slice(editor.selectionStart,editor.selectionEnd).trim();
+if(es)transInput.value=es.slice(0,2000);
+}
+document.getElementById('glossModal').classList.add('show');
+if(termInput.value&&!transInput.value)transInput.focus();else termInput.focus();
+}
+glossBtn.onclick=openGlossModal;
 function closeGlossModal(){document.getElementById('glossModal').classList.remove('show');}
 document.getElementById('glossModal').addEventListener('click',e=>{if(e.target.id==='glossModal')closeGlossModal();});
 document.getElementById('glossForm').addEventListener('submit',e=>{
@@ -395,23 +450,74 @@ fetch('/glossary/'+id+'/delete',{method:'POST'})
 .catch(()=>showToast('Suppression impossible.'));
 }
 
-// Notes de traduction (sauvegarde automatique 1 s après la saisie)
+// Notes de traduction : volet latéral (gauche ou droite selon les paramètres)
+const notesPanel=document.getElementById('notesPanel');
+const notesToggle=document.getElementById('notesToggle');
 const notesBtn=document.getElementById('notesBtn');
-notesBtn.onclick=()=>document.getElementById('notesModal').classList.add('show');
-function closeNotesModal(){document.getElementById('notesModal').classList.remove('show');}
-document.getElementById('notesModal').addEventListener('click',e=>{if(e.target.id==='notesModal')closeNotesModal();});
-const notesArea=document.getElementById('notesArea');
-const notesStatus=document.getElementById('notesStatus');
-let notesTimer=null;
-notesArea.addEventListener('input',()=>{
-notesStatus.textContent='…';
-clearTimeout(notesTimer);
-notesTimer=setTimeout(()=>{
-fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'notes='+encodeURIComponent(notesArea.value)})
-.then(r=>{if(!r.ok)throw 0;notesStatus.textContent='✓ Enregistré à '+new Date().toLocaleTimeString();})
-.catch(()=>notesStatus.textContent="Échec de l'enregistrement.");
-},1000);
+function toggleNotes(open){
+if(open===undefined)open=!notesPanel.classList.contains('open');
+notesPanel.classList.toggle('open',open);
+notesToggle.classList.toggle('show',!open);
+notesToggle.innerHTML=notesPanel.classList.contains('side-left')?(open?'‹':'›'):(open?'›':'‹');
+if(open)document.getElementById('noteContent').focus();
+}
+notesBtn.onclick=()=>toggleNotes(true);
+notesToggle.onclick=()=>toggleNotes(true);
+document.getElementById('noteForm').addEventListener('submit',e=>{
+e.preventDefault();
+const content=document.getElementById('noteContent').value;
+if(!content.trim())return;
+const chapter=document.getElementById('noteChapter').value;
+const btn=document.getElementById('noteAddBtn');
+btn.disabled=true;
+fetch('/projects/{{ project.id }}/notes',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'content='+encodeURIComponent(content)+'&chapter_idx='+(chapter||'')})
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(n=>{
+const list=document.getElementById('notesList');
+const row=document.createElement('div');
+row.className='note-row';row.dataset.id=n.id;
+let html='';
+if(n.chapter_idx!==null&&n.chapter_idx!==undefined)html+='<span class="ch">Chap. '+(n.chapter_idx+1)+'</span><br>';
+html+='<span class="content"></span><span class="del" title="Supprimer la note">\ud83d\uddd1</span>';
+row.innerHTML=html;
+row.querySelector('.content').textContent=n.content;
+row.querySelector('.del').onclick=()=>deleteNote(n.id,row.querySelector('.del'));
+list.prepend(row);
+document.getElementById('noteContent').value='';
+document.getElementById('notesStatus').textContent='';
+showToast('Note ajoutée.',true,1500);
+})
+.catch(()=>{document.getElementById('notesStatus').textContent="Échec de l'ajout.";})
+.finally(()=>btn.disabled=false);
 });
+document.querySelectorAll('#notesList .note-row .del').forEach(el=>{
+el.onclick=()=>deleteNote(parseInt(el.closest('.note-row').dataset.id),el);
+});
+function deleteNote(id,el){
+if(!confirm('Supprimer cette note ?'))return;
+fetch('/notes/'+id+'/delete',{method:'POST'})
+.then(r=>{if(!r.ok)throw 0;el.closest('.note-row').remove();showToast('Note supprimée.',true,1500);})
+.catch(()=>showToast('Suppression impossible.'));
+}
+
+// Synchronisation du défilement entre le panneau source et l'éditeur.
+const syncBtn=document.getElementById('syncBtn');
+let scrollSync=localStorage.getItem('eulalie-scroll-sync')!=='off';
+function updateSyncBtn(){syncBtn.classList.toggle('sync-on',scrollSync);syncBtn.title=(scrollSync?'Désactiver':'Activer')+' la synchronisation du défilement';}
+updateSyncBtn();
+syncBtn.onclick=()=>{scrollSync=!scrollSync;localStorage.setItem('eulalie-scroll-sync',scrollSync?'on':'off');updateSyncBtn();};
+let syncing=false;
+function syncFrom(from,to){
+if(!scrollSync||syncing)return;
+const fh=from.scrollHeight-from.clientHeight;
+const th=to.scrollHeight-to.clientHeight;
+if(fh<=0||th<=0)return;
+syncing=true;
+to.scrollTop=from.scrollTop/fh*th;
+requestAnimationFrame(()=>{syncing=false;});
+}
+sourcePane.addEventListener('scroll',()=>syncFrom(sourcePane,editor));
+editor.addEventListener('scroll',()=>syncFrom(editor,sourcePane));
 
 // Raccourcis personnalisés
 function matchShortcut(e,combo){
@@ -434,6 +540,8 @@ if(tag==='input'||tag==='textarea'&&e.target.id!=='editor'){return;}
 if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n)n.click();}
 if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links[0];if(p)p.click();}
 if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();togglePreview();}
+if(matchShortcut(e,SC_GLOSS)){e.preventDefault();openGlossModal();}
+if(matchShortcut(e,SC_NOTES)){e.preventDefault();toggleNotes();}
 });
 
 // Zoom Ctrl+molette par panneau

@@ -58,6 +58,10 @@ h1{font-size:20px}
 <input type="text" name="shortcut_next" id="shortcut_next" value="{{ settings.shortcut_next }}">
 <label for="shortcut_preview">Afficher / masquer l'aperçu</label>
 <input type="text" name="shortcut_preview" id="shortcut_preview" value="{{ settings.shortcut_preview }}">
+<label for="shortcut_glossary">Ouvrir le glossaire du livre</label>
+<input type="text" name="shortcut_glossary" id="shortcut_glossary" value="{{ settings.shortcut_glossary }}">
+<label for="shortcut_notes">Ouvrir / fermer le volet des notes</label>
+<input type="text" name="shortcut_notes" id="shortcut_notes" value="{{ settings.shortcut_notes }}">
 </div>
 <div class="card">
 <h2>Traduction automatique (anglais → français)</h2>
@@ -66,6 +70,11 @@ h1{font-size:20px}
 {% match settings.translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
 <label for="translate_timeout" style="margin-top:12px">Temps d'attente maximal des traductions (secondes, 1 à 120)</label>
 <input type="number" name="translate_timeout" id="translate_timeout" min="1" max="120" step="1" value="{{ settings.translate_timeout }}">
+<label for="notes_side" style="margin-top:12px">Côté d'affichage du volet Notes</label>
+<select name="notes_side" id="notes_side">
+<option value="right" {% if settings.notes_side == "right" %}selected{% endif %}>Droite</option>
+<option value="left" {% if settings.notes_side == "left" %}selected{% endif %}>Gauche</option>
+</select>
 
 </div>
 <button class="btn" type="submit">Enregistrer</button>
