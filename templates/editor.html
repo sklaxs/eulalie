@@ -39,8 +39,10 @@ textarea#editor:focus{outline:none}
 #preview{font-size:15px;line-height:1.7}
 #preview h1,#preview h2,#preview h3{color:#fff;margin-top:1.2em}
 #preview img{max-width:100%;border-radius:8px}
-#preview table{border-collapse:collapse;margin:12px 0}
-#preview th,#preview td{border:1px solid var(--border);padding:6px 12px}
+#preview table,#notesPreview table{border-collapse:collapse;margin:12px 0}
+#preview th,#preview td,#notesPreview th,#notesPreview td{border:1px solid var(--border);padding:6px 12px}
+#notesPreview h1,#notesPreview h2,#notesPreview h3{color:#fff;margin-top:1.2em}
+#notesPreview img{max-width:100%;border-radius:8px}
 #preview blockquote{border-left:3px solid var(--accent);margin:10px 0;padding:4px 14px;color:var(--muted)}
 .navbtns{display:flex;gap:8px;align-items:center}
 .btn-sm{background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 12px;font-size:13px;cursor:pointer;text-decoration:none}
@@ -49,8 +51,9 @@ textarea#editor:focus{outline:none}
 .counter{color:var(--muted);font-size:13px}
 .saved{color:var(--accent2);font-size:12px;opacity:0;transition:opacity .3s}
 .saved.show{opacity:1}
-/* bouton Traduire vertical : centré sur le bord gauche du panneau source */
-#translateBtn{display:none;position:absolute;left:0;top:50%;transform:translateY(-50%);width:0.4cm;max-height:70%;border:none;border-radius:0 8px 8px 0;background:linear-gradient(180deg,var(--accent),#7c6cf0);color:#fff;font-size:13px;font-weight:600;cursor:pointer;writing-mode:vertical-rl;padding:14px 0;box-sizing:border-box;white-space:nowrap;overflow:hidden;z-index:5;box-shadow:2px 0 12px rgba(0,0,0,.3)}
+/* bouton Traduire : petit onglet icône (Tabler language) centré sur le bord
+   droit du panneau source, comme l'onglet du volet Notes */
+#translateBtn{display:none;position:absolute;right:-1px;top:50%;transform:translateY(-50%);width:34px;height:46px;border:1px solid var(--border);border-radius:8px 0 0 8px;background:linear-gradient(135deg,var(--accent),#7c6cf0);color:#fff;cursor:pointer;z-index:5;box-shadow:-2px 0 12px rgba(0,0,0,.3);padding:0}
 #translateBtn:hover{filter:brightness(1.15)}
 #translateBtn:disabled{opacity:.6;cursor:wait}
 nav .navbtn-icon{background:none;border:none;color:var(--muted);cursor:pointer;display:inline-flex;padding:0;align-items:center}
@@ -164,7 +167,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div class="chapter-title">{{ current.title }}</div>
 {% for line in current_lines %}{{ line }}<br>{% endfor %}
 </div>
-<button id="translateBtn">🌍 Traduire la sélection</button>
+<button id="translateBtn" title="Traduire la sélection ({{ shortcut_translate }})"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M9 6.371c0 4.418 -2.239 6.629 -5 6.629" /> <path d="M4 6.371h7" /> <path d="M5 9c0 2.144 2.252 3.908 6 4" /> <path d="M12 20l4 -9l4 9" /> <path d="M19.1 18h-6.2" /> <path d="M6.694 3l.793 .582" /> </svg></button>
 </section>
 <section class="pane">
 <div class="toolbar">
@@ -188,7 +191,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="toast" class="toast"></div>
 <div class="modal-bg" id="glossModal">
 <div class="modal">
-<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><div style="display:flex;gap:8px"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a><button class="btn-sm" onclick="closeGlossModal()">Fermer</button></div></div>
+<div class="modal-head"><h3>📔 Glossaire — {{ project.title }}</h3><div style="display:flex;gap:8px;align-items:center"><button class="btn-sm" onclick="closeGlossModal()" title="Fermer">✕</button><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a></div></div>
 <div class="modal-body">
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Ils sont appliqués automatiquement aux traductions ; cliquez une traduction pour l'insérer au curseur.</p>
 <form class="gloss-form" id="glossForm">
@@ -212,7 +215,7 @@ header.top{flex-wrap:wrap;gap:8px}
 </div>
 <aside id="notesPanel" class="side-{{ notes_side }}">
 <div class="panel-head">
-<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg> Notes — {{ project.title }}</h3>
+<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg> Note</h3>
 <div style="display:flex;gap:8px">
 <button class="btn-sm" id="notesPreviewBtn" title="Aperçu Markdown des notes">👁 Aperçu</button>
 <a class="btn-sm" id="notesExportBtn" href="#" title="Exporter la note en Markdown (.md)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
@@ -225,7 +228,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="notesStatus" style="color:var(--muted);font-size:12px;margin-top:6px;min-height:16px"></div>
 </div>
 </aside>
-<button id="notesToggle" class="side-{{ notes_side }}" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
+<button id="notesToggle" class="side-{{ notes_side }} show" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -260,6 +263,7 @@ const SC_NEXT = "{{ shortcut_next }}";
 const SC_PREVIEW = "{{ shortcut_preview }}";
 const SC_GLOSS = "{{ shortcut_glossary }}";
 const SC_NOTES = "{{ shortcut_notes }}";
+const SC_TRANSLATE = "{{ shortcut_translate }}";
 const editor = document.getElementById('editor');
 const preview = document.getElementById('preview');
 const sourcePane = document.getElementById('source');
@@ -374,7 +378,7 @@ if(ev.key==='Escape'){nameEl.textContent=old;nameEl.contentEditable='false';}};
 const translateBtn=document.getElementById('translateBtn');
 const MAX_SEL=50000;
 let selText='';
-function resetTranslateBtn(){translateBtn.textContent='🌍 Traduire';translateBtn.disabled=false;translateBtn.style.display='none';}
+function resetTranslateBtn(){translateBtn.disabled=false;translateBtn.style.display='none';}
 // Sélection bornée au panneau source : une sélection qui déborde (Ctrl+A,
 // glissement jusqu'aux boutons…) est découpée à l'intersection avec le texte
 // source, sinon « Traduire (6945 car.) Synchro Aperçu » se retrouvait traduit.
@@ -396,13 +400,12 @@ if(translateBtn.disabled)return;
 const t=sourceSelectionText();
 if(t.length>1&&t.length<MAX_SEL){
 selText=t;
-translateBtn.textContent=t.length>40?'🌍 Traduire ('+t.length+' car.)':'🌍 Traduire « '+t+' »';
 translateBtn.style.display='block';
 }else{resetTranslateBtn();selText='';}
 });
 translateBtn.onclick=()=>{
 if(!selText)return;
-translateBtn.textContent='… traduction';translateBtn.disabled=true;
+translateBtn.disabled=true;
 fetch('/translate',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'text='+encodeURIComponent(selText)+'&project_id={{ project.id }}'})
 .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text()})
 .then(txt=>{insert(txt+'\n');resetTranslateBtn();})
@@ -580,7 +583,10 @@ const tag=(e.target.tagName||'').toLowerCase();
 if(tag==='input'||tag==='textarea'&&e.target.id!=='editor'){return;}
 if(matchShortcut(e,SC_NEXT)){const links=[...document.querySelectorAll('.navbtns a')];const n=links[links.length-1];if(n)n.click();}
 if(matchShortcut(e,SC_PREV)){const links=[...document.querySelectorAll('.navbtns a')];const p=links[0];if(p)p.click();}
-if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();togglePreview();}
+if(matchShortcut(e,SC_PREVIEW)){e.preventDefault();
+// Le raccourci d'aperçu pilote le volet Notes quand il est ouvert.
+if(notesPanel.classList.contains('open')){document.getElementById('notesPreviewBtn').click();}else{togglePreview();}}
+if(matchShortcut(e,SC_TRANSLATE)&&selText){e.preventDefault();translateBtn.click();}
 if(matchShortcut(e,SC_GLOSS)){e.preventDefault();openGlossModal();}
 if(matchShortcut(e,SC_NOTES)){e.preventDefault();toggleNotes();}
 });

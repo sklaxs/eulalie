@@ -621,6 +621,7 @@ async fn editor_page_inner(
             shortcut_preview: settings.shortcut_preview,
             shortcut_glossary: settings.shortcut_glossary,
             shortcut_notes: settings.shortcut_notes,
+            shortcut_translate: settings.shortcut_translate,
             notes_side: settings.notes_side,
             notes_close_outside: settings.notes_close_outside,
             images,
@@ -1177,6 +1178,7 @@ struct SettingsForm {
     translate_timeout: Option<String>,
     shortcut_glossary: Option<String>,
     shortcut_notes: Option<String>,
+    shortcut_translate: Option<String>,
     notes_side: Option<String>,
     notes_close_outside: Option<String>,
 }
@@ -1198,6 +1200,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 shortcut_preview: "ALT+ArrowUp".into(),
                 shortcut_glossary: "Alt+G".into(),
                 shortcut_notes: "Alt+N".into(),
+                shortcut_translate: "Alt+T".into(),
                 translate_server: server,
                 translate_timeout: timeout.clamp(1, 120),
                 notes_side: if side == "left" { "left".into() } else { "right".into() },
@@ -1219,6 +1222,9 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
                 if let Some(n) = v.get("notes").and_then(|x| x.as_str()) {
                     s.shortcut_notes = n.to_string();
                 }
+                if let Some(t) = v.get("translate").and_then(|x| x.as_str()) {
+                    s.shortcut_translate = t.to_string();
+                }
             }
             s
         }
@@ -1232,6 +1238,7 @@ async fn load_settings(db: &SqlitePool, user_id: i64) -> UserSettings {
             translate_timeout: 10,
             shortcut_glossary: "Alt+G".into(),
             shortcut_notes: "Alt+N".into(),
+            shortcut_translate: "Alt+T".into(),
             notes_side: "right".into(),
             notes_close_outside: true,
         },
@@ -1270,6 +1277,7 @@ async fn save_settings(
         "preview": sanitize_shortcut(form.shortcut_preview.as_deref().unwrap_or("ALT+ArrowUp")),
         "glossary": sanitize_shortcut(form.shortcut_glossary.as_deref().unwrap_or("Alt+G")),
         "notes": sanitize_shortcut(form.shortcut_notes.as_deref().unwrap_or("Alt+N")),
+        "translate": sanitize_shortcut(form.shortcut_translate.as_deref().unwrap_or("Alt+T")),
     })
     .to_string();
     // Côté d'affichage du volet Notes : gauche ou droite (droite par défaut).

@@ -51,6 +51,7 @@ pub struct EditorTemplate {
     pub notes_close_outside: bool,
     pub shortcut_glossary: String,
     pub shortcut_notes: String,
+    pub shortcut_translate: String,
     pub notes_side: String,
 }
 
@@ -116,6 +117,7 @@ pub struct UserSettings {
     pub shortcut_preview: String,
     pub shortcut_glossary: String,
     pub shortcut_notes: String,
+    pub shortcut_translate: String,
     pub translate_server: Option<String>,
     pub translate_timeout: i64,
     pub notes_side: String,
