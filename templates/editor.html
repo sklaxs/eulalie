@@ -83,16 +83,20 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 #glossDupWarn{display:none;color:#ffb454;font-size:12px;width:100%}
 #glossSearch{width:100%;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:6px 10px;font:inherit;font-size:13px;margin-bottom:10px;box-sizing:border-box}
 #glossSearch:focus{outline:none;border-color:var(--accent)}
-.gloss-row .mis{flex:0 1 auto;color:#ffb454;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:32%}
-.gloss-row .autolbl{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;flex:0 0 auto}
-.gloss-list{display:flex;flex-direction:column;gap:6px}
-.gloss-row{display:flex;align-items:center;gap:10px;border:1px solid var(--border);border-radius:8px;padding:8px 12px;background:var(--bg3);font-size:14px;cursor:pointer}
-.gloss-row:hover{border-color:var(--accent)}
-.gloss-row .term{font-weight:600;flex:0 0 38%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gloss-row .arrow{color:var(--muted)}
-.gloss-row .trans{flex:1;color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gloss-row .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
-.gloss-row .del:hover{opacity:1}
+/* glossaire : tableau à en-têtes cliquables (tri) */
+.gloss-table{width:100%;border-collapse:collapse;font-size:13px}
+.gloss-table th{cursor:pointer;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg2);user-select:none;white-space:nowrap}
+.gloss-table th:hover{color:var(--accent2)}
+.gloss-table th .dir{color:var(--accent2);font-size:10px}
+.gloss-table td{padding:7px 8px;border-bottom:1px solid var(--border);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
+.gloss-table tbody tr{cursor:pointer}
+.gloss-table tbody tr:hover{background:var(--bg3)}
+.gloss-table .term{font-weight:600}
+.gloss-table .trans{color:var(--accent2)}
+.gloss-table .mis{color:#ffb454;font-size:12px}
+.gloss-table .mis.empty{color:var(--muted);opacity:.4}
+.gloss-table .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px;width:30px}
+.gloss-table .del:hover{opacity:1}
 /* volet Notes latéral (gauche ou droite selon les paramètres) */
 /* volets latéraux (notes, glossaire, paramètres) : comportement unifié */
 .sidepanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease,width .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
@@ -124,10 +128,10 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 .sidetab.show{display:block}
 .sidetab.side-left{left:0;border-radius:0 8px 8px 0}
 .sidetab.side-right{right:0;border-radius:8px 0 0 8px}
-#glossToggle{top:62%}
-#settingsToggle{top:74%}
+#notesToggle{top:calc(50% - 38px)}
+#glossToggle{top:50%;border-top:none;border-bottom:none;border-radius:0}
+#settingsToggle{top:calc(50% + 38px)}
 #glossPanel{width:440px}
-#glossPanel.fullscreen{width:100vw;max-width:100vw}
 .note-form textarea{width:100%;min-height:70px;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:10px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
 .note-form textarea:focus{outline:none;border-color:var(--accent)}
 .note-form select{margin-top:8px;background:var(--bg3);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:4px 8px;font-size:13px}
@@ -214,7 +218,6 @@ header.top{flex-wrap:wrap;gap:8px}
 <div id="toast" class="toast"></div>
 <aside id="glossPanel" class="sidepanel side-{{ notes_side }}">
 <div class="panel-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center">
-<button class="btn-sm gloss-expand" title="Agrandir le volet"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 8v-2a2 2 0 0 1 2 -2h2" /> <path d="M4 16v2a2 2 0 0 0 2 2h2" /> <path d="M16 4h2a2 2 0 0 1 2 2v2" /> <path d="M16 20h2a2 2 0 0 0 2 -2v-2" /> </svg></button>
 <button class="btn-sm" id="glossImportBtn" title="Importer un glossaire CSV (terme;traduction;mistraduction)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M12 18.004h-5.343c-2.572 -.004 -4.657 -2.011 -4.657 -4.487c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.38 0 2.57 .811 3.128 1.986" /> <path d="M19 22v-6" /> <path d="M22 19l-3 -3l-3 3" /> </svg></button>
 <input type="file" id="glossImportFile" accept=".csv,text/csv" style="display:none">
 <a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter le glossaire en CSV"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
@@ -223,11 +226,6 @@ header.top{flex-wrap:wrap;gap:8px}
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Cliquez une ligne pour insérer la traduction au curseur.</p>
 <div class="gloss-tools">
 <input type="text" id="glossSearch" placeholder="🔍 Rechercher : terme, traduction ou mistraduction…">
-<select id="glossSort" title="Ordre de tri">
-<option value="term">A→Z terme</option>
-<option value="trans">A→Z traduction</option>
-<option value="mis">A→Z mistraduction</option>
-</select>
 </div>
 <form class="gloss-form" id="glossForm">
 <input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
@@ -239,13 +237,21 @@ header.top{flex-wrap:wrap;gap:8px}
 {% if glossary.is_empty() %}
 <p class="empty-note" id="glossEmptyNote">Aucun terme pour l'instant — ajoutez vos références de traduction ci-dessus.</p>
 {% endif %}
-<div class="gloss-list" id="glossList">
+<table class="gloss-table" id="glossTable">
+<thead><tr>
+<th data-key="term">Terme <span class="dir"></span></th>
+<th data-key="trans">Traduction <span class="dir"></span></th>
+<th data-key="mis">Mistraduction <span class="dir"></span></th>
+<th></th>
+</tr></thead>
+<tbody id="glossList">
 {% for g in glossary %}
-<div class="gloss-row" data-id="{{ g.id }}" data-term="{{ g.term }}" data-trans="{{ g.translation }}">
-<span class="term">{{ g.term }}</span><span class="arrow">→</span><span class="trans">{{ g.translation }}</span>{% match g.mistranslation %}{% when Some with (m) %}<span class="mis" title="Mistraduction récurrente">≠ {{ m }}</span>{% when None %}{% endmatch %}<span class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</span>
-</div>
+<tr class="gloss-row" data-id="{{ g.id }}" data-term="{{ g.term }}" data-trans="{{ g.translation }}" title="Cliquer pour insérer la traduction au curseur">
+<td class="term">{{ g.term }}</td><td class="trans">{{ g.translation }}</td>{% match g.mistranslation %}{% when Some with (m) %}<td class="mis">{{ m }}</td>{% when None %}<td class="mis empty">—</td>{% endmatch %}<td class="del" title="Supprimer" onclick="deleteGloss({{ g.id }}, this)">🗑</td>
+</tr>
 {% endfor %}
-</div>
+</tbody>
+</table>
 </div>
 </aside>
 <button id="glossToggle" class="sidetab side-{{ notes_side }} show" title="Afficher le glossaire ({{ shortcut_glossary }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
@@ -517,6 +523,7 @@ if(open===undefined)open=!glossPanel.classList.contains('open');
 glossPanel.classList.toggle('open',open);
 glossToggle.classList.toggle('show',!open);
 if(open){prefillGloss();document.getElementById('glossSearch').focus();}
+persistPanelState();
 }
 glossBtn.onclick=()=>toggleGloss(true);
 glossToggle.onclick=()=>toggleGloss(true);
@@ -543,26 +550,38 @@ row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(parseInt
 });
 // Construction d'une ligne du glossaire (ajout manuel, import, rafraîchissement).
 function makeGlossRow(g){
-const row=document.createElement('div');
+const row=document.createElement('tr');
 row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
 row.dataset.term=g.term;
+// <tr> généré dynamiquement (ajout, import, rafraîchissement).
 row.title="Cliquer pour insérer la traduction au curseur";
-row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span>'+(g.mistranslation?'<span class="mis" title="Mistraduction récurrente">≠ </span>':'')+'<span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.innerHTML='<td class="term"></td><td class="trans"></td><td class="mis'+(g.mistranslation?'':' empty')+'"></td><td class="del" title="Supprimer">\ud83d\uddd1</td>';
 row.querySelector('.term').textContent=g.term;
 row.querySelector('.trans').textContent=g.translation;
-if(g.mistranslation)row.querySelector('.mis').append(g.mistranslation);
+row.querySelector('.mis').textContent=g.mistranslation||'—';
 row.onclick=()=>insert(g.translation);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
 return row;
 }
-// Tri alphabétique : terme source, traduction ou mistraduction.
-document.getElementById('glossSort').addEventListener('change',e=>{
-const key=e.target.value;
-const list=document.getElementById('glossList');
-[...list.querySelectorAll('.gloss-row')].sort((a,b)=>{
-const val=r=>key==='mis'?((r.querySelector('.mis')||{textContent:''}).textContent.replace(/^≠\s*/,'')):(r.dataset[key]||'');
-return val(a).localeCompare(val(b),'fr',{sensitivity:'base'});
-}).forEach(r=>list.appendChild(r));
+// Tri par en-têtes cliquables du tableau (terme / traduction / mistraduction).
+let glossSortKey='term',glossSortAsc=true;
+function sortGloss(){
+const tb=document.getElementById('glossList');
+[...tb.querySelectorAll('tr')].sort((a,b)=>{
+const v=r=>((r.querySelector('.'+glossSortKey)||{textContent:''}).textContent||'').replace(/^—$/,'');
+const c=v(a).localeCompare(v(b),'fr',{sensitivity:'base'});
+return glossSortAsc?c:-c;
+}).forEach(r=>tb.appendChild(r));
+document.querySelectorAll('#glossTable th[data-key]').forEach(th=>{
+th.querySelector('.dir').textContent=th.dataset.key===glossSortKey?(glossSortAsc?'▾':'▴'):'';
+});
+}
+document.querySelectorAll('#glossTable th[data-key]').forEach(th=>{
+th.onclick=()=>{
+const key=th.dataset.key;
+if(glossSortKey===key)glossSortAsc=!glossSortAsc;else{glossSortKey=key;glossSortAsc=true;}
+sortGloss();
+};
 });
 // Import d'un glossaire CSV (même trame que l'export : terme;traduction;mistraduction).
 document.getElementById('glossImportBtn').onclick=()=>document.getElementById('glossImportFile').click();
@@ -602,7 +621,7 @@ const q=e.target.value.trim().toLowerCase();
 document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
 if(!q){row.style.display='flex';return;}
 const hay=(row.dataset.term+' '+row.dataset.trans+' '+(row.querySelector('.mis')?row.querySelector('.mis').textContent:'')).toLowerCase();
-row.style.display=hay.includes(q)?'flex':'none';
+row.style.display=hay.includes(q)?'table-row':'none';
 });
 });
 function deleteGloss(id,el){
@@ -621,6 +640,7 @@ if(open===undefined)open=!notesPanel.classList.contains('open');
 notesPanel.classList.toggle('open',open);
 notesToggle.classList.toggle('show',!open);
 if(open)document.getElementById('notesArea').focus();
+persistPanelState();
 }
 notesBtn.onclick=()=>toggleNotes(true);
 notesToggle.onclick=()=>toggleNotes(true);
@@ -701,6 +721,7 @@ if(open===undefined)open=!settingsPanel.classList.contains('open');
 settingsPanel.classList.toggle('open',open);
 settingsToggle.classList.toggle('show',!open);
 if(open)document.getElementById('stAutosave').focus();
+persistPanelState();
 }
 settingsBtn.onclick=()=>toggleSettings(true);
 settingsToggle.onclick=()=>toggleSettings(true);
@@ -728,10 +749,24 @@ btn.onclick=()=>{
 const fs=panel.classList.toggle('fullscreen');
 btn.innerHTML=fs?ICON_MIN:ICON_MAX;
 btn.title=fs?'Réduire le volet':'Agrandir le volet';
+persistPanelState();
 };
 }
+// L'état des volets (ouverts, agrandis) survit au changement de page.
+function persistPanelState(){
+localStorage.setItem('eulalie-panels',JSON.stringify({
+notes:{open:notesPanel.classList.contains('open'),fs:notesPanel.classList.contains('fullscreen')},
+gloss:{open:glossPanel.classList.contains('open')},
+settings:{open:settingsPanel.classList.contains('open')}
+}));
+}
+try{
+const st=JSON.parse(localStorage.getItem('eulalie-panels')||'{}');
+if(st.notes&&st.notes.open){toggleNotes(true);if(st.notes.fs){notesPanel.classList.add('fullscreen');const b=document.querySelector('.notes-expand');b.innerHTML=ICON_MIN;b.title='Réduire le volet';}}
+if(st.gloss&&st.gloss.open)toggleGloss(true);
+if(st.settings&&st.settings.open)toggleSettings(true);
+}catch(e){}
 bindExpand(document.querySelector('.notes-expand'),notesPanel);
-bindExpand(document.querySelector('.gloss-expand'),glossPanel);
 
 // ── Échap : ferme le volet ouvert ──
 document.addEventListener('keydown',e=>{
