@@ -94,14 +94,21 @@ nav .navbtn-icon:hover{color:var(--accent2)}
 .gloss-row .del{color:#ff6b6b;opacity:.5;cursor:pointer;font-size:13px}
 .gloss-row .del:hover{opacity:1}
 /* volet Notes latéral (gauche ou droite selon les paramètres) */
-/* volets latéraux (notes, glossaire) : comportement unifié */
-.sidepanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
+/* volets latéraux (notes, glossaire, paramètres) : comportement unifié */
+.sidepanel{position:fixed;top:0;bottom:0;width:390px;max-width:92vw;background:var(--bg2);z-index:45;display:flex;flex-direction:column;transition:transform .25s ease,width .25s ease;box-shadow:0 0 40px rgba(0,0,0,.45)}
+.sidepanel.fullscreen{width:100vw;max-width:100vw}
 .sidepanel.side-left{left:0;border-right:1px solid var(--border);transform:translateX(-100%)}
 .sidepanel.side-right{right:0;border-left:1px solid var(--border);transform:translateX(100%)}
 .sidepanel.open.side-left,.sidepanel.open.side-right{transform:translateX(0)}
 .sidepanel .panel-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);gap:8px}
 .sidepanel .panel-head h3{margin:0;font-size:15px}
 .sidepanel .panel-body{flex:1;overflow:auto;padding:14px 16px}
+.sidepanel label{display:block;margin:10px 0 4px;font-size:13px;color:var(--muted)}
+.sidepanel input[type=text],.sidepanel input[type=number],.sidepanel select{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:6px;padding:7px 10px;font:inherit;font-size:13px;box-sizing:border-box}
+.sidepanel input:focus,.sidepanel select:focus{outline:none;border-color:var(--accent)}
+.gloss-tools{display:flex;gap:8px;margin-bottom:10px}
+.gloss-tools input{flex:1;min-width:0}
+.gloss-tools select{flex:0 0 auto;width:auto!important}
 #notesArea{width:100%;min-height:calc(100% - 24px);background:var(--bg);border:1px solid var(--border);color:var(--fg);border-radius:8px;padding:12px;font:14px/1.6 ui-monospace,'Cascadia Code',monospace;resize:vertical;box-sizing:border-box}
 #notesArea:focus{outline:none;border-color:var(--accent)}
 .sidetab{position:fixed;top:50%;transform:translateY(-50%);z-index:46;background:var(--bg2);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:10px 4px;font-size:13px;cursor:pointer;display:none}
@@ -155,7 +162,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <button class="navbtn-icon" id="glossBtn" title="Glossaire du livre ({{ shortcut_glossary }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg></button>
 <button class="navbtn-icon" id="notesBtn" title="Notes de traduction ({{ shortcut_notes }})"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
 <a href="/projects/{{ project.id }}/export.md" title="Exporter en Markdown" download><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
-<a href="/settings" title="Paramètres"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></a>
+<button class="navbtn-icon" id="settingsBtn" title="Paramètres"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg></button>
 <a href="/" title="Projets"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /> </svg></a>
 <a href="#" title="Déconnexion" onclick="event.preventDefault();document.getElementById('logoutForm').submit()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M13 12v.01" /> <path d="M3 21h18" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h7.5m2.5 10.5v7.5" /> <path d="M14 7h7m-3 -3l3 3l-3 3" /> </svg></a>
 <form id="logoutForm" method="post" action="/logout" style="display:none"></form>
@@ -196,10 +203,22 @@ header.top{flex-wrap:wrap;gap:8px}
 </div>
 <div id="toast" class="toast"></div>
 <aside id="glossPanel" class="sidepanel side-{{ notes_side }}">
-<div class="panel-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center"><a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a><button class="btn-sm" onclick="toggleGloss(false)" title="Masquer le volet">✕</button></div></div>
+<div class="panel-head"><h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10 19h-6a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h6a2 2 0 0 1 2 2a2 2 0 0 1 2 -2h6a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-6a2 2 0 0 0 -2 2a2 2 0 0 0 -2 -2" /> <path d="M12 5v16" /> <path d="M7 7h1" /> <path d="M7 11h1" /> <path d="M16 7h1" /> <path d="M16 11h1" /> <path d="M16 15h1" /> </svg> Glossaire</h3><div style="display:flex;gap:8px;align-items:center">
+<button class="btn-sm" id="glossImportBtn" title="Importer un glossaire CSV (terme;traduction;mistraduction)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M12 18.004h-5.343c-2.572 -.004 -4.657 -2.011 -4.657 -4.487c0 -2.475 2.085 -4.482 4.657 -4.482c.393 -1.762 1.794 -3.2 3.675 -3.773c1.88 -.572 3.956 -.193 5.444 1c1.488 1.19 2.162 3.007 1.77 4.769h.99c1.38 0 2.57 .811 3.128 1.986" /> <path d="M19 22v-6" /> <path d="M22 19l-3 -3l-3 3" /> </svg></button>
+<input type="file" id="glossImportFile" accept=".csv,text/csv" style="display:none">
+<a class="btn-sm" href="/projects/{{ project.id }}/glossary.csv" download title="Exporter en CSV (outil de révision)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg> CSV</a>
+<button class="btn-sm gloss-expand" title="Plein écran"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 8v-2a2 2 0 0 1 2 -2h2" /> <path d="M4 16v2a2 2 0 0 0 2 2h2" /> <path d="M16 4h2a2 2 0 0 1 2 2v2" /> <path d="M16 20h2a2 2 0 0 0 2 -2v-2" /> </svg></button>
+<button class="btn-sm" onclick="toggleGloss(false)" title="Masquer le volet">✕</button></div></div>
 <div class="panel-body">
 <p class="hint" style="margin:0 0 10px">Termes de référence du livre. Cliquez une ligne pour insérer la traduction au curseur.</p>
+<div class="gloss-tools">
 <input type="text" id="glossSearch" placeholder="🔍 Rechercher : terme, traduction ou mistraduction…">
+<select id="glossSort" title="Ordre de tri">
+<option value="term">A→Z terme</option>
+<option value="trans">A→Z traduction</option>
+<option value="mis">A→Z mistraduction</option>
+</select>
+</div>
 <form class="gloss-form" id="glossForm">
 <input type="text" name="term" id="glossTerm" placeholder="Terme source (ex. Accountability)" maxlength="200" required>
 <input type="text" name="translation" id="glossTrans" placeholder="Traduction (ex. Responsable)" maxlength="2000" required>
@@ -225,6 +244,7 @@ header.top{flex-wrap:wrap;gap:8px}
 <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg> Note</h3>
 <div style="display:flex;gap:8px">
 <button class="btn-sm" id="notesPreviewBtn" title="Aperçu Markdown des notes">👁 Aperçu</button>
+<button class="btn-sm notes-expand" title="Plein écran"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 8v-2a2 2 0 0 1 2 -2h2" /> <path d="M4 16v2a2 2 0 0 0 2 2h2" /> <path d="M16 4h2a2 2 0 0 1 2 2v2" /> <path d="M16 20h2a2 2 0 0 0 2 -2v-2" /> </svg></button>
 <a class="btn-sm" id="notesExportBtn" href="#" title="Exporter la note en Markdown (.md)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4" /> <path d="M12 13l0 9" /> <path d="M9 19l3 3l3 -3" /> </svg></a>
 <button class="btn-sm" onclick="toggleNotes(false)" title="Masquer le volet">✕</button>
 </div>
@@ -236,6 +256,43 @@ header.top{flex-wrap:wrap;gap:8px}
 </div>
 </aside>
 <button id="notesToggle" class="sidetab side-{{ notes_side }} show" title="Afficher les notes ({{ shortcut_notes }})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /> <path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415" /> <path d="M16 5l3 3" /> </svg></button>
+<aside id="settingsPanel" class="sidepanel side-{{ notes_side }}">
+<div class="panel-head">
+<h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" > <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg> Paramètres</h3>
+<button class="btn-sm" onclick="toggleSettings(false)" title="Masquer le volet">✕</button>
+</div>
+<div class="panel-body">
+<form id="settingsForm">
+<label style="display:flex;align-items:center;gap:8px;margin:4px 0 12px;cursor:pointer"><input type="checkbox" name="autosave" id="stAutosave" {% if autosave %}checked{% endif %}> Sauvegarde automatique des chapitres</label>
+<label>Raccourcis clavier</label>
+<label for="stScPrev" style="margin:4px 0 2px;font-size:12px">Page précédente</label>
+<input type="text" name="shortcut_prev" id="stScPrev" value="{{ shortcut_prev }}">
+<label for="stScNext" style="margin:4px 0 2px;font-size:12px">Page suivante</label>
+<input type="text" name="shortcut_next" id="stScNext" value="{{ shortcut_next }}">
+<label for="stScPreview" style="margin:4px 0 2px;font-size:12px">Aperçu</label>
+<input type="text" name="shortcut_preview" id="stScPreview" value="{{ shortcut_preview }}">
+<label for="stScGloss" style="margin:4px 0 2px;font-size:12px">Volet glossaire</label>
+<input type="text" name="shortcut_glossary" id="stScGloss" value="{{ shortcut_glossary }}">
+<label for="stScNotes" style="margin:4px 0 2px;font-size:12px">Volet notes</label>
+<input type="text" name="shortcut_notes" id="stScNotes" value="{{ shortcut_notes }}">
+<label for="stScTranslate" style="margin:4px 0 2px;font-size:12px">Traduire la sélection</label>
+<input type="text" name="shortcut_translate" id="stScTranslate" value="{{ shortcut_translate }}">
+<label style="margin-top:14px">Traduction</label>
+<label for="stServer" style="margin:4px 0 2px;font-size:12px">Serveur LibreTranslate (http:// ou https://)</label>
+<input type="text" name="translate_server" id="stServer" placeholder="http://libretranslate:5000" {% match translate_server %}{% when Some with (s) %}value="{{ s }}"{% when None %}{% endmatch %}>
+<label for="stTimeout" style="margin:4px 0 2px;font-size:12px">Temps d'attente maximal (secondes, 1 à 120)</label>
+<input type="number" name="translate_timeout" id="stTimeout" min="1" max="120" step="1" value="{{ translate_timeout }}">
+<label style="margin-top:14px">Volets</label>
+<label for="stSide" style="margin:4px 0 2px;font-size:12px">Côté d'affichage des volets</label>
+<select name="notes_side" id="stSide">
+<option value="right" {% if notes_side == "right" %}selected{% endif %}>Droite</option>
+<option value="left" {% if notes_side == "left" %}selected{% endif %}>Gauche</option>
+</select>
+<label style="display:flex;align-items:center;gap:8px;margin:10px 0 0;cursor:pointer"><input type="checkbox" name="notes_close_outside" id="stCloseOutside" {% if notes_close_outside %}checked{% endif %}> Fermer les volets au clic extérieur</label>
+<button class="btn-sm primary" type="submit" id="settingsSaveBtn" style="margin-top:16px;width:100%">Enregistrer</button>
+</form>
+</div>
+</aside>
 <div class="modal-bg" id="imgModal">
 <div class="modal">
 <div class="modal-head"><h3>Images du projet</h3><button class="btn-sm" onclick="closeImgModal()">Fermer</button></div>
@@ -439,7 +496,7 @@ function toggleGloss(open){
 if(open===undefined)open=!glossPanel.classList.contains('open');
 glossPanel.classList.toggle('open',open);
 glossToggle.classList.toggle('show',!open);
-if(open){prefillGloss();document.getElementById('glossTerm').focus();}
+if(open){prefillGloss();document.getElementById('glossSearch').focus();}
 }
 glossBtn.onclick=()=>toggleGloss(true);
 glossToggle.onclick=()=>toggleGloss(true);
@@ -455,17 +512,7 @@ fetch('/projects/{{ project.id }}/glossary',{method:'POST',headers:{'Content-Typ
 .then(g=>{
 const list=document.getElementById('glossList');
 const note=document.getElementById('glossEmptyNote');if(note)note.remove();
-const row=document.createElement('div');
-row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
-row.title="Cliquer pour insérer la traduction au curseur";
-row.dataset.term=g.term;
-row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span>'+(g.mistranslation?'<span class="mis" title="Mistraduction récurrente">≠ </span>':'')+'<span class="del" title="Supprimer">\ud83d\uddd1</span>';
-row.querySelector('.term').textContent=g.term;
-row.querySelector('.trans').textContent=g.translation;
-if(g.mistranslation)row.querySelector('.mis').append(g.mistranslation);
-row.onclick=()=>insert(g.translation);
-row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
-list.prepend(row);
+list.prepend(makeGlossRow(g));
 e.target.reset();btn.disabled=false;showToast('Terme ajouté au glossaire.',true,1500);
 })
 .catch(()=>{btn.disabled=false;showToast("Échec de l'ajout au glossaire.");});
@@ -474,6 +521,52 @@ document.querySelectorAll('#glossList .gloss-row').forEach(row=>{
 row.onclick=()=>insert(row.dataset.trans);
 row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(parseInt(row.dataset.id),row.querySelector('.del'));};
 });
+// Construction d'une ligne du glossaire (ajout manuel, import, rafraîchissement).
+function makeGlossRow(g){
+const row=document.createElement('div');
+row.className='gloss-row';row.dataset.id=g.id;row.dataset.trans=g.translation;
+row.dataset.term=g.term;
+row.title="Cliquer pour insérer la traduction au curseur";
+row.innerHTML='<span class="term"></span><span class="arrow">\u2192</span><span class="trans"></span>'+(g.mistranslation?'<span class="mis" title="Mistraduction récurrente">≠ </span>':'')+'<span class="del" title="Supprimer">\ud83d\uddd1</span>';
+row.querySelector('.term').textContent=g.term;
+row.querySelector('.trans').textContent=g.translation;
+if(g.mistranslation)row.querySelector('.mis').append(g.mistranslation);
+row.onclick=()=>insert(g.translation);
+row.querySelector('.del').onclick=ev=>{ev.stopPropagation();deleteGloss(g.id,row.querySelector('.del'));};
+return row;
+}
+// Tri alphabétique : terme source, traduction ou mistraduction.
+document.getElementById('glossSort').addEventListener('change',e=>{
+const key=e.target.value;
+const list=document.getElementById('glossList');
+[...list.querySelectorAll('.gloss-row')].sort((a,b)=>{
+const val=r=>key==='mis'?((r.querySelector('.mis')||{textContent:''}).textContent.replace(/^≠\s*/,'')):(r.dataset[key]||'');
+return val(a).localeCompare(val(b),'fr',{sensitivity:'base'});
+}).forEach(r=>list.appendChild(r));
+});
+// Import d'un glossaire CSV (même trame que l'export : terme;traduction;mistraduction).
+document.getElementById('glossImportBtn').onclick=()=>document.getElementById('glossImportFile').click();
+document.getElementById('glossImportFile').addEventListener('change',e=>{
+const f=e.target.files[0];if(!f)return;
+const fd=new FormData();fd.append('file',f);
+showToast('Import en cours…');
+fetch('/projects/{{ project.id }}/glossary/import',{method:'POST',body:fd})
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(v=>{showToast('✓ '+v.imported+' terme'+(v.imported>1?'s':'')+' importé'+(v.imported>1?'s':'')+'.',true);return refreshGloss();})
+.catch(()=>showToast("Échec de l'import CSV."));
+e.target.value='';
+});
+function refreshGloss(){
+return fetch('/projects/{{ project.id }}/glossary.json')
+.then(r=>{if(!r.ok)throw 0;return r.json()})
+.then(rows=>{
+const list=document.getElementById('glossList');
+list.innerHTML='';
+const note=document.getElementById('glossEmptyNote');if(note)note.remove();
+rows.forEach(g=>list.appendChild(makeGlossRow(g)));
+})
+.catch(()=>showToast('Rafraîchissement impossible.'));
+}
 // Avertissement en direct pendant la saisie du terme : si le terme existe
 // déjà (insensible à la casse), on l'affiche — l'ajout reste possible et met
 // simplement à jour la traduction.
@@ -517,6 +610,7 @@ document.addEventListener('click',e=>{
 if(!NOTES_CLOSE_OUTSIDE)return;
 if(notesPanel.classList.contains('open')&&!notesPanel.contains(e.target)&&!notesToggle.contains(e.target)&&!notesBtn.contains(e.target))toggleNotes(false);
 if(glossPanel.classList.contains('open')&&!glossPanel.contains(e.target)&&!glossToggle.contains(e.target)&&!glossBtn.contains(e.target))toggleGloss(false);
+if(settingsPanel.classList.contains('open')&&!settingsPanel.contains(e.target)&&!settingsBtn.contains(e.target))toggleSettings(false);
 });
 // Sauvegarde automatique 1 s après la saisie.
 const notesArea=document.getElementById('notesArea');
@@ -577,6 +671,52 @@ requestAnimationFrame(()=>{syncing=false;});
 }
 sourcePane.addEventListener('scroll',()=>syncFrom(sourcePane,editor));
 editor.addEventListener('scroll',()=>syncFrom(editor,sourcePane));
+
+// ── Paramètres en volet latéral ──
+const settingsPanel=document.getElementById('settingsPanel');
+const settingsBtn=document.getElementById('settingsBtn');
+function toggleSettings(open){
+if(open===undefined)open=!settingsPanel.classList.contains('open');
+settingsPanel.classList.toggle('open',open);
+if(open)document.getElementById('stAutosave').focus();
+}
+settingsBtn.onclick=()=>toggleSettings(true);
+// Enregistrement AJAX ; la page est rechargée pour appliquer les raccourcis
+// et le côté des volets sans recharger manuellement.
+document.getElementById('settingsForm').addEventListener('submit',e=>{
+e.preventDefault();
+const btn=document.getElementById('settingsSaveBtn');
+btn.disabled=true;btn.textContent='…';
+const fd=new FormData(e.target);
+const params=new URLSearchParams();
+for(const [k,v] of fd.entries())params.append(k,v);
+if(!fd.get('autosave'))params.append('autosave','');
+if(!fd.get('notes_close_outside'))params.append('notes_close_outside','');
+fetch('/settings',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:params})
+.then(r=>{if(!r.ok)throw 0;showToast('✓ Paramètres enregistrés.',true);setTimeout(()=>location.reload(),700);})
+.catch(()=>{btn.disabled=false;btn.textContent='Enregistrer';showToast("Échec de l'enregistrement.");});
+});
+
+// ── Plein écran des volets ──
+const ICON_MAX='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 8v-2a2 2 0 0 1 2 -2h2" /> <path d="M4 16v2a2 2 0 0 0 2 2h2" /> <path d="M16 4h2a2 2 0 0 1 2 2v2" /> <path d="M16 20h2a2 2 0 0 0 2 -2v-2" /> </svg>';
+const ICON_MIN='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M15 19v-2a2 2 0 0 1 2 -2h2" /> <path d="M15 5v2a2 2 0 0 0 2 2h2" /> <path d="M5 15h2a2 2 0 0 1 2 2v2" /> <path d="M5 9h2a2 2 0 0 0 2 -2v-2" /> </svg>';
+function bindExpand(btn,panel){
+btn.onclick=()=>{
+const fs=panel.classList.toggle('fullscreen');
+btn.innerHTML=fs?ICON_MIN:ICON_MAX;
+btn.title=fs?'Réduire le volet':'Plein écran';
+};
+}
+bindExpand(document.querySelector('.notes-expand'),notesPanel);
+bindExpand(document.querySelector('.gloss-expand'),glossPanel);
+
+// ── Échap : ferme le volet ouvert ──
+document.addEventListener('keydown',e=>{
+if(e.key!=='Escape')return;
+if(notesPanel.classList.contains('open'))toggleNotes(false);
+if(glossPanel.classList.contains('open'))toggleGloss(false);
+if(settingsPanel.classList.contains('open'))toggleSettings(false);
+});
 
 // Raccourcis personnalisés
 function matchShortcut(e,combo){

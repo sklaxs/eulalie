@@ -41,6 +41,8 @@ pub struct EditorTemplate {
     pub next_idx: Option<usize>,
     pub prev_idx: Option<usize>,
     pub autosave: bool,
+    pub translate_server: Option<String>,
+    pub translate_timeout: i64,
     pub shortcut_prev: String,
     pub shortcut_next: String,
     pub shortcut_preview: String,

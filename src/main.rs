@@ -94,6 +94,8 @@ async fn main() -> Result<()> {
         .route("/projects/:id/glossary", post(add_glossary_term))
         .route("/glossary/:id/delete", post(delete_glossary_term))
         .route("/projects/:id/glossary.csv", get(export_glossary_csv))
+        .route("/projects/:id/glossary.json", get(glossary_json))
+        .route("/projects/:id/glossary/import", post(import_glossary))
         .route("/projects/:id/notes", post(save_notes))
         .route("/settings", get(settings_page).post(save_settings))
         .route("/translate", post(translate_text))
@@ -598,6 +600,8 @@ async fn editor_page_inner(
             next_idx,
             prev_idx,
             autosave: settings.autosave,
+            translate_server: settings.translate_server,
+            translate_timeout: settings.translate_timeout,
             shortcut_prev: settings.shortcut_prev,
             shortcut_next: settings.shortcut_next,
             shortcut_preview: settings.shortcut_preview,
@@ -1063,6 +1067,164 @@ async fn save_notes(
 /// Champ CSV entre guillemets, guillemets doublés (RFC 4180).
 fn csv_field(s: &str) -> String {
     format!("\"{}\"", s.replace('"', "\"\""))
+}
+
+/// Liste JSON du glossaire (rafraîchissement du volet après import).
+async fn glossary_json(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let entries: Vec<GlossaryRow> = sqlx::query_as(
+        "SELECT id, term, translation, mistranslation FROM glossary WHERE project_id = ? ORDER BY term",
+    )
+    .bind(project_id)
+    .fetch_all(&state.db)
+    .await
+    .unwrap_or_default();
+    let rows: Vec<serde_json::Value> = entries
+        .into_iter()
+        .map(|g| {
+            serde_json::json!({
+                "id": g.id,
+                "term": g.term,
+                "translation": g.translation,
+                "mistranslation": g.mistranslation,
+            })
+        })
+        .collect();
+    axum::Json(rows).into_response()
+}
+
+/// Parseur CSV minimal (RFC 4180) : champs séparés par `;`, guillemets
+/// doublés pour échapper, retours à la ligne CRLF tolérés.
+fn parse_csv(content: &str) -> Vec<Vec<String>> {
+    let content = content.strip_prefix('\u{feff}').unwrap_or(content);
+    let mut rows: Vec<Vec<String>> = Vec::new();
+    let mut row: Vec<String> = Vec::new();
+    let mut field = String::new();
+    let mut in_quotes = false;
+    let mut chars = content.chars().peekable();
+    while let Some(c) = chars.next() {
+        match c {
+            '"' => {
+                if in_quotes && chars.peek() == Some(&'"') {
+                    chars.next();
+                    field.push('"');
+                } else {
+                    in_quotes = !in_quotes;
+                }
+            }
+            ';' if !in_quotes => {
+                row.push(std::mem::take(&mut field));
+            }
+            '\n' if !in_quotes => {
+                if field.ends_with('\r') {
+                    field.pop();
+                }
+                row.push(std::mem::take(&mut field));
+                if !row.iter().all(|f| f.trim().is_empty()) {
+                    rows.push(std::mem::take(&mut row));
+                } else {
+                    row.clear();
+                }
+            }
+            _ => field.push(c),
+        }
+    }
+    if !field.is_empty() || !row.is_empty() {
+        row.push(field);
+        if !row.iter().all(|f| f.trim().is_empty()) {
+            rows.push(row);
+        }
+    }
+    rows
+}
+
+/// Import d'un glossaire CSV (mêmes colonnes que l'export : terme;traduction;mistraduction).
+async fn import_glossary(
+    State(state): State<SharedState>,
+    Path(project_id): Path<i64>,
+    session: Session,
+    mut multipart: Multipart,
+) -> Response {
+    let Ok(user) = require_user(&session).await else {
+        return Redirect::to("/login").into_response();
+    };
+    if load_project(&state, user.0, project_id).await.is_err() {
+        return StatusCode::NOT_FOUND.into_response();
+    }
+    let mut content: Option<String> = None;
+    while let Some(field) = multipart.next_field().await.ok().flatten() {
+        if field.name() == Some("file") {
+            let data = field.bytes().await.unwrap_or_default();
+            if data.len() > MAX_TEXT {
+                return (StatusCode::BAD_REQUEST, "fichier trop volumineux").into_response();
+            }
+            content = Some(String::from_utf8_lossy(&data).into_owned());
+        }
+    }
+    let Some(content) = content else {
+        return (StatusCode::BAD_REQUEST, "aucun fichier reçu").into_response();
+    };
+    let mut rows = parse_csv(&content);
+    // Ligne d'en-tête optionnelle (comme dans l'export).
+    if rows
+        .first()
+        .and_then(|r| r.first())
+        .map(|t| t.trim().to_lowercase() == "terme")
+        .unwrap_or(false)
+    {
+        rows.remove(0);
+    }
+    let mut imported = 0usize;
+    for row in rows {
+        if row.len() < 2 {
+            continue;
+        }
+        let term = row[0].trim().to_string();
+        let translation = row[1].trim().to_string();
+        let mistranslation = row.get(2).map(|m| m.trim().to_string()).filter(|m| !m.is_empty());
+        if term.is_empty() || translation.is_empty() || term.len() > MAX_TERM || translation.len() > MAX_TRANSLATION {
+            continue;
+        }
+        let existing: Option<i64> = sqlx::query_scalar(
+            "SELECT id FROM glossary WHERE project_id = ? AND term = ? COLLATE NOCASE",
+        )
+        .bind(project_id)
+        .bind(&term)
+        .fetch_optional(&state.db)
+        .await
+        .unwrap_or(None);
+        let ok = if let Some(id) = existing {
+            sqlx::query("UPDATE glossary SET translation = ?, mistranslation = ? WHERE id = ?")
+                .bind(&translation)
+                .bind(&mistranslation)
+                .bind(id)
+                .execute(&state.db)
+                .await
+                .is_ok()
+        } else {
+            sqlx::query("INSERT INTO glossary (project_id, term, translation, mistranslation) VALUES (?, ?, ?, ?)")
+                .bind(project_id)
+                .bind(&term)
+                .bind(&translation)
+                .bind(&mistranslation)
+                .execute(&state.db)
+                .await
+                .is_ok()
+        };
+        if ok {
+            imported += 1;
+        }
+    }
+    axum::Json(serde_json::json!({"imported": imported})).into_response()
 }
 
 async fn export_glossary_csv(
